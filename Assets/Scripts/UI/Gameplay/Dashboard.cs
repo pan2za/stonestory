@@ -90,12 +90,12 @@ public class Dashboard : MonoBehaviour
         {
             var obj = new Entity
             {
-                PlayerName = $"Player {pos[i] + 1}",
+                PlayerName = $"玩家 {pos[i] + 1}",
                 Score = scores[pos[i]]
             };
 
             if (playerId == pos[i] + 1)
-                obj.PlayerName = $"Player {pos[i] + 1} (You)";
+                obj.PlayerName = $"玩家 {pos[i] + 1} (你)";
 
             list.Add(obj);
         }

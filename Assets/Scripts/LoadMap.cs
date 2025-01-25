@@ -13,7 +13,7 @@ public class LoadMap : MonoBehaviour
 
     public int Players;
     public int PlayerId;
-    public int size = 13;
+    public int size = 23;
 
     public void Awake()
     {
@@ -25,7 +25,7 @@ public class LoadMap : MonoBehaviour
         Players = MyPlayerPrefs.GetPlayers();
 
         if (Players == 0) Application.Quit(0);
-        size = Players <= 4 ? 13 : 15;
+        size = Players <= 4 ? 23 : 25;
         LoadGame();
     }
 

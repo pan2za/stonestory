@@ -19,7 +19,7 @@ public class LoadGame : MonoBehaviour
     public void Update()
     {
         float val = Mathf.Clamp01(loadingOperation.progress / 0.9f);
-        text.text = $"loading: {(int)(val * 100f)}%";
+        text.text = $"加载: {(int)(val * 100f)}%";
         progressBar.value = val;
 
     }

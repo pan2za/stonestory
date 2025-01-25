@@ -13,7 +13,7 @@ public class ShowPanel : MonoBehaviour
     {
         int id = MyPlayerPrefs.GetLevel();
         if (id == 0) id = 1;
-        round.text = $"Round {id}";
+        round.text = $"第{id}回合";
         elapsedTime = 1f;
         canShow = true;
     }
