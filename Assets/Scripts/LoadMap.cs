@@ -66,7 +66,9 @@ public class LoadMap : MonoBehaviour
             {
                 player.GetComponent<PlayerController>().enabled = false;
                 player.GetComponent<EnemyController>().enabled = true;
-                player.GetComponent<EnemyController>().mode = (PlayerType)Random.Range(0, 4);
+                //FIXME: player.GetComponent<EnemyController>().mode = (PlayerType)Random.Range(0, 4);
+                //修改为只移动，不放炸弹模式
+                player.GetComponent<EnemyController>().mode = PlayerType.Passive;
             }
             else
             {

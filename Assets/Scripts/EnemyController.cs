@@ -111,7 +111,7 @@ public class EnemyController : MonoBehaviour
                     }
                 }
 
-                if (bomb)
+                if (bomb && mode != PlayerType.Passive) // 在 Passive 模式下禁用炸弹放置
                 {
                     if (player.bombs != 0 && CanPlaceBomb())
                     {
@@ -144,15 +144,15 @@ public class EnemyController : MonoBehaviour
                                 path = FollowLocation(transform.position, FindRandomWalk());
                                 break;
                             case PlayerType.Farm:
-
                                 path = GetClosestBreakable(Round(transform.position), detections);
-
                                 break;
                             case PlayerType.Survivor:
                                 path = GetSafePosition(transform.position);
                                 break;
+                            case PlayerType.Passive: // 新增：只移动，不放炸弹
+                                path = FollowLocation(transform.position, FindRandomWalk());
+                                break;
                         }
-
                     }
                     else
                     {
@@ -172,6 +172,7 @@ public class EnemyController : MonoBehaviour
                 break;
         }
     }
+
 
     private bool HasBombsActive()
     {

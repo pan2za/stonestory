@@ -8,7 +8,7 @@ public class MyCustomMap
     static Block[] map;
     static int size;
 
-    public static void CreateMap(int mapSize)
+    public static void CreateStdMap(int mapSize)
     {
         size = mapSize;
         int half = size >> 1;
@@ -70,6 +70,98 @@ public class MyCustomMap
         }
 
         GenItems(mapSize);
+    }
+
+    public static void CreateMap(int mapSize)
+    {
+        size = mapSize;
+        int half = size >> 1;
+
+        map = new Block[size * size];
+        int players = MyPlayerPrefs.GetPlayers();
+
+        var temp = new Vector2[]
+        {
+            new Vector2(1f, 1f),
+            new Vector2(size - 2, size - 2),
+            new Vector2(1f, size - 2),
+            new Vector2(size - 2, 1f),
+
+            new Vector2(half, half),
+
+            new Vector2(1f, half),
+            new Vector2(half, 1f),
+            new Vector2(size - 2, half),
+            new Vector2(half, size - 2),
+        };
+
+        // 初始化地图为可破坏方块
+        for (int i = 0; i < size; i++)
+        {
+            for (int j = 0; j < size; j++)
+            {
+                int index = i * size + j;
+                map[index] = Block.Breakable;
+            }
+        }
+
+        // 设置玩家出生点周围为空地
+        for (int i = 0; i < players; i++)
+        {
+            var list = FindLocation(temp[i]);
+
+            for (int j = 0; j < list.Length; j++)
+            {
+                int x = Mathf.RoundToInt(list[j].x);
+                int y = Mathf.RoundToInt(list[j].y);
+                map[x * size + y] = Block.Born;
+            }
+        }
+
+        // 设置地图边界为墙壁
+        for (int i = 0; i < size; i++)
+        {
+            map[i] = Block.Wall;
+            map[(size - 1) * size + i] = Block.Wall;
+            map[i * size] = Block.Wall;
+            map[i * size + size - 1] = Block.Wall;
+        }
+
+        // 随机生成墙壁，确保墙壁附近可通行
+        for (int i = 2; i < size - 2; i += 2)
+        {
+            for (int j = 2; j < size - 2; j += 2)
+            {
+                if (Random.Range(0, 100) < 50) // 50% 的概率生成墙壁
+                {
+                    if (IsWallValid(i, j))
+                    {
+                        int index = i * size + j;
+                        map[index] = Block.Wall;
+                    }
+                }
+            }
+        }
+
+        GenItems(mapSize);
+    }
+
+    // 检查墙壁是否合法（附近有可通行路径）
+    static bool IsWallValid(int x, int y)
+    {
+        // 检查上下左右四个方向是否至少有一个方向可通行
+        bool canPass = false;
+
+        if (x > 0 && map[(x - 1) * size + y] != Block.Wall)
+            canPass = true;
+        if (x < size - 1 && map[(x + 1) * size + y] != Block.Wall)
+            canPass = true;
+        if (y > 0 && map[x * size + (y - 1)] != Block.Wall)
+            canPass = true;
+        if (y < size - 1 && map[x * size + (y + 1)] != Block.Wall)
+            canPass = true;
+
+        return canPass;
     }
 
     static void GenItems(int mapSize)
