@@ -166,7 +166,9 @@ public class MyCustomMap
 
     static void GenItems(int mapSize)
     {
-        if(mapSize == 15)
+        if(mapSize > 15)
+            GenItems(new int[] { 34, 20, 50 }, 2);
+        else if(mapSize == 15)
             GenItems(new int[] { 14, 10, 12 }, 2);
         else
             GenItems(new int[] { 12, 8, 10 }, 2);

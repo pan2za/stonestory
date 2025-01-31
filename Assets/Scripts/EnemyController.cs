@@ -580,18 +580,18 @@ public class EnemyController : MonoBehaviour
     private Distance DetectCollision(Vector3 direction, Vector3 position)
     {
         Distance result = new Distance();
-        bool collide = false;
 
-        int i = 1;
+
+        const int maxDistance = 10; // 设置最大检测距离
         RaycastHit hit;
 
-        while (!collide)
+        for (int i = 1; i <= maxDistance; i++)
         {
             Physics.Raycast(position, direction, out hit, i);
 
             if (hit.collider)
             {
-                collide = true;
+
                 result.dir = direction;
                 result.tag = hit.collider.tag;
 
@@ -603,15 +603,16 @@ public class EnemyController : MonoBehaviour
                     if (result.dist > 0)
                     {
                         result.weight = 1 / 2;
-                        var obj = hit.collider.gameObject.GetComponent<Bomb>();
 
-                        if (!bombs.Contains(obj))
+                        var obj = hit.collider.gameObject.GetComponent<Bomb>();
+                        if (obj != null && !bombs.Contains(obj))
+                        {
                             bombs.Add(obj);
+                        }
                     }
                 }
+                break; // 找到碰撞后退出循环
             }
-
-            i++;
         }
 
         return result;
