@@ -18,7 +18,7 @@ public class GameStart : MonoBehaviour
 
     public void Start()
     {
-        Players = 2;
+        Players = 4;
         Rounds = 1;
     }
 
