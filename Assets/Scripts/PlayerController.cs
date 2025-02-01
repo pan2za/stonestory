@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
+using System.Linq;
 
 public class PlayerController : MonoBehaviour
 {
@@ -19,6 +20,9 @@ public class PlayerController : MonoBehaviour
     private Animator animator;
     private List<Bomb> bombs;
 
+    // 存储所有炸弹位置的列表
+    private List<Vector3> bombPositions = new List<Vector3>();
+
     public void Start()
     {
         player = GetComponent<PlayerUnit>();
@@ -29,6 +33,8 @@ public class PlayerController : MonoBehaviour
         bombs = FindObjectOfType<LoadMap>().BombList;
         action = FindObjectOfType<ActionJoystick>();
         joystick = FindObjectOfType<DynamicJoystick>();
+
+        bombPositions = new List<Vector3>();
     }
 
     private bool GetKey(Joypad key)
@@ -99,20 +105,42 @@ public class PlayerController : MonoBehaviour
     {
         if (player.bombs > 0 && bombPrefab)
         {
-            player.bombs--;
+            var newPosition = new Vector3(Mathf.RoundToInt(myTransform.position.x), bombPrefab.transform.position.y, Mathf.RoundToInt(myTransform.position.z));
 
-            var obj = Instantiate (bombPrefab,
-                new Vector3 (Mathf.RoundToInt(myTransform.position.x), bombPrefab.transform.position.y, Mathf.RoundToInt(myTransform.position.z)),
-                bombPrefab.transform.rotation);
+            // 检查新位置是否已经有炸弹
+            bool isPositionOccupied = bombPositions.Any(pos => Vector3.Distance(pos, newPosition) < 0.5f);
 
-            obj.GetComponent<Bomb>().explode_size = player.explosion_power;
-            obj.GetComponent<Bomb>().player = player;
+            if (!isPositionOccupied)
+            {
+                player.bombs--;
 
-            var bomb = obj.GetComponent<Bomb>();
-            bomb.PlayerId = player.PlayerId;
-            bombs.Add(bomb);
+                var obj = Instantiate (bombPrefab,
+                    new Vector3 (Mathf.RoundToInt(myTransform.position.x), bombPrefab.transform.position.y, Mathf.RoundToInt(myTransform.position.z)),
+                    bombPrefab.transform.rotation);
 
-            if(player.canKick) obj.GetComponent<Rigidbody>().isKinematic = false;
+                obj.GetComponent<Bomb>().explode_size = player.explosion_power;
+                obj.GetComponent<Bomb>().player = player;
+
+                var bomb = obj.GetComponent<Bomb>();
+                bomb.PlayerId = player.PlayerId;
+                bombs.Add(bomb);
+                bombPositions.Add(newPosition); // 添加新炸弹的位置
+
+                if(player.canKick) obj.GetComponent<Rigidbody>().isKinematic = false;
+            }
         }
     }
+    // 处理炸弹爆炸后的清理工作
+    public void OnBombExploded(Vector3 bombPosition)
+    {
+        // 找到并移除炸弹的位置
+        for (int i = 0; i < bombPositions.Count; i++)
+        {
+            if (Vector3.Distance(bombPositions[i], bombPosition) < 0.5f)
+            {
+                bombPositions.RemoveAt(i);
+                break;
+            }
+        }
+    }    
 }

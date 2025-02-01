@@ -16,6 +16,8 @@ public class Bomb : MonoBehaviour
     public PlayerUnit player;
     private AudioSource audioSource;
 
+    private PlayerController playerController;
+
     public void Awake()
     {
         audioSource = GetComponent<AudioSource>();
@@ -24,6 +26,8 @@ public class Bomb : MonoBehaviour
 
     public void Start()
     {
+        // 获取PlayerController实例
+        playerController = FindObjectOfType<PlayerController>();
         Invoke("Explode", 3f);
     }
 
@@ -45,6 +49,8 @@ public class Bomb : MonoBehaviour
         transform.Find("Collider").gameObject.SetActive(false);
         Destroy(gameObject, .3f);
         player.bombs++;
+        // 通知playerController炸弹已爆炸并移除其位置
+        playerController.OnBombExploded(transform.position);
     }
 
     public void OnTriggerEnter(Collider other)
