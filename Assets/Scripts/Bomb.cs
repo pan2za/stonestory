@@ -3,6 +3,8 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 
+// https://gitee.com/yuanzhi0515/playground/blob/master/pommerman/characters.py
+// reference to class Bomb(object):
 public class Bomb : MonoBehaviour
 {
     public AudioClip explosionSound;
@@ -18,10 +20,13 @@ public class Bomb : MonoBehaviour
 
     private PlayerController playerController;
 
+    public Vector2 position; // 显式定义position字段
+
     public void Awake()
     {
         audioSource = GetComponent<AudioSource>();
         audioSource.volume = MyPlayerPrefs.GetVolume();
+        position = new Vector2(transform.position.x, transform.position.z); // 初始化position为当前x和z坐标
     }
 
     public void Start()
@@ -48,7 +53,7 @@ public class Bomb : MonoBehaviour
 
         transform.Find("Collider").gameObject.SetActive(false);
         Destroy(gameObject, .3f);
-        player.bombs++;
+        player.avalibleBomb++;
         // 通知playerController炸弹已爆炸并移除其位置
         playerController.OnBombExploded(transform.position);
     }

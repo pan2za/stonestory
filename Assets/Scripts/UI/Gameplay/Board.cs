@@ -28,7 +28,7 @@ public class Board : MonoBehaviour
         {
             Power.text = player.explosion_power.ToString();
             Speed.text = player.moveSpeed.ToString();
-            Bombs.text = player.bombs.ToString();
+            Bombs.text = player.avalibleBomb.ToString();
         }
     }
 }

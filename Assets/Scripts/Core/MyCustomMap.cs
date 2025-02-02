@@ -47,6 +47,7 @@ public class MyCustomMap
             {
                 int index = i * size + j;
                 map[index] = Block.Breakable;
+                board[i, j] = PommermanItem.Wood;
             }
         }
 
@@ -71,6 +72,11 @@ public class MyCustomMap
             map[(size - 1) * size + i] = Block.Wall;
             map[i * size] = Block.Wall;
             map[i * size + size - 1] = Block.Wall;
+
+            board[i, 0] = PommermanItem.Rigid;
+            board[size -1, i] = PommermanItem.Rigid;
+            board[0, i] = PommermanItem.Rigid;
+            board[i, size - 1] = PommermanItem.Rigid;
         }
 
         // 随机生成墙壁，确保墙壁附近可通行
@@ -84,6 +90,7 @@ public class MyCustomMap
                     {
                         int index = i * size + j;
                         map[index] = Block.Wall;
+                        board[i, j] = PommermanItem.Rigid;
                     }
                 }
             }
@@ -139,7 +146,8 @@ public class MyCustomMap
 
         while(count > 0)
         {
-            int index = Random.Range(0, (int)BonusType.Bombs);
+            //FIXME: No kick
+            int index = Random.Range(0, (int)BonusType.SpeedUp);
 
             if (g[index] > 0)
             {
@@ -186,6 +194,7 @@ public class MyCustomMap
                         };
 
                         list.Add(powerUp);
+                        board[dx, dy] = ToPommermanItem(bonusType);
                     }
                 }
 
@@ -244,5 +253,27 @@ public class MyCustomMap
         }
 
         return list.ToArray();
+    }
+    //convert bonusType to PommermanItem
+    static PommermanItem ToPommermanItem(BonusType bonusType )
+    {
+        switch(bonusType)
+        {
+            case BonusType.ExtraBomb:
+                return PommermanItem.ExtraBomb;
+            case BonusType.IncrRange:
+                return PommermanItem.IncrRange;
+            case BonusType.Kick:
+                return PommermanItem.Kick;
+            case BonusType.SpeedUp:
+                //FIXME: no speedup function in Pommerman,
+                //so, when using board[x,y] to judge whether
+                // the speedup in this location,
+                // I should turn to Unity function itself
+                // or other variable.
+                return PommermanItem.Passage;
+            default:
+                return PommermanItem.Passage;
+        }
     }
 }

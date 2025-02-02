@@ -4,8 +4,9 @@ using UnityEngine;
 
 public enum BonusType : int
 {
-    FireUp = 1,
-    SpeedUp = 2,
-    Bombs = 3,
+    //sequence should be the same as PommermanItem.
+    ExtraBomb = 1,
+    IncrRange = 2,
+    SpeedUp = 3,
     Kick = 4
 }

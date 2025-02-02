@@ -28,11 +28,11 @@ public class Bonus : MonoBehaviour
 
             switch(BonusType)
             {
-                case BonusType.FireUp:
-                        player.explosion_power++;
+                case BonusType.IncrRange:
+                    player.explosion_power++;
                     break;
-                case BonusType.Bombs:
-                    player.bombs++;
+                case BonusType.ExtraBomb:
+                    player.avalibleBomb++;
                     break;
                 case BonusType.SpeedUp:
                     player.moveSpeed++;

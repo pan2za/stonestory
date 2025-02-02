@@ -113,7 +113,7 @@ public class EnemyController : MonoBehaviour
 
                 if (bomb && mode != PlayerType.Passive) // 在 Passive 模式下禁用炸弹放置
                 {
-                    if (player.bombs != 0 && CanPlaceBomb())
+                    if (player.avalibleBomb != 0 && CanPlaceBomb())
                     {
                         state = Status.Bomb;
                         break;
@@ -628,13 +628,13 @@ public class EnemyController : MonoBehaviour
 
     private void DropBomb()
     {
-        if (player.bombs > 0 && bombPrefab)
+        if (player.avalibleBomb > 0 && bombPrefab)
         {
             var obj = Instantiate(bombPrefab, new Vector3(Mathf.RoundToInt(transform.position.x),
              bombPrefab.transform.position.y, Mathf.RoundToInt(transform.position.z)),
              bombPrefab.transform.rotation);
 
-            player.bombs--;
+            player.avalibleBomb--;
             var temp = obj.GetComponent<Bomb>();
             temp.PlayerId = player.PlayerId;
             bombs.Add(temp);

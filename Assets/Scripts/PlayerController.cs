@@ -18,6 +18,8 @@ public class PlayerController : MonoBehaviour
     private ActionJoystick action;
 
     private Animator animator;
+    //https://gitee.com/yuanzhi0515/playground/blob/master/pommerman/forward_model.py
+    // The starting bombs.
     private List<Bomb> bombs;
 
     // 存储所有炸弹位置的列表
@@ -103,16 +105,16 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public void DropBomb()
     {
-        if (player.bombs > 0 && bombPrefab)
+        if (player.avalibleBomb > 0 && bombPrefab)
         {
-            var newPosition = new Vector3(Mathf.RoundToInt(myTransform.position.x), bombPrefab.transform.position.y, Mathf.RoundToInt(myTransform.position.z));
+            var newPosition = new Vector2(Mathf.RoundToInt(myTransform.position.x), Mathf.RoundToInt(myTransform.position.z));
 
             // 检查新位置是否已经有炸弹
-            bool isPositionOccupied = bombPositions.Any(pos => Vector3.Distance(pos, newPosition) < 0.5f);
+            bool isPositionOccupied = IsPositionOccupied(newPosition);
 
             if (!isPositionOccupied)
             {
-                player.bombs--;
+                player.avalibleBomb--;
 
                 var obj = Instantiate (bombPrefab,
                     new Vector3 (Mathf.RoundToInt(myTransform.position.x), bombPrefab.transform.position.y, Mathf.RoundToInt(myTransform.position.z)),
@@ -123,8 +125,8 @@ public class PlayerController : MonoBehaviour
 
                 var bomb = obj.GetComponent<Bomb>();
                 bomb.PlayerId = player.PlayerId;
+                bomb.position = newPosition;
                 bombs.Add(bomb);
-                bombPositions.Add(newPosition); // 添加新炸弹的位置
 
                 if(player.canKick) obj.GetComponent<Rigidbody>().isKinematic = false;
             }
@@ -134,13 +136,35 @@ public class PlayerController : MonoBehaviour
     public void OnBombExploded(Vector3 bombPosition)
     {
         // 找到并移除炸弹的位置
-        for (int i = 0; i < bombPositions.Count; i++)
+        var newPosition = new Vector2(Mathf.RoundToInt(myTransform.position.x), Mathf.RoundToInt(myTransform.position.z));
+        RemoveBombAtPosition(newPosition);
+    }    
+    
+    // 检查新位置是否已经有炸弹的方法
+    public bool IsPositionOccupied(Vector2 newPosition)
+    {
+        foreach (var bomb in bombs)
         {
-            if (Vector3.Distance(bombPositions[i], bombPosition) < 0.5f)
+            if (bomb.position == newPosition)
             {
-                bombPositions.RemoveAt(i);
-                break;
+                return true; // 如果找到相同的位置，则说明位置被占用了
             }
         }
-    }    
+        return false; // 如果遍历完所有炸弹都没有发现相同的位置，则说明位置未被占用
+    }
+
+    public void RemoveBombAtPosition(Vector2 position)
+    {
+        // 从最后一个元素开始向前遍历
+        for (int i = bombs.Count - 1; i >= 0; i--)
+        {
+            if (bombs[i].position == position)
+            {
+                // 移除炸弹
+                bombs.RemoveAt(i);
+                break; // 如果只需要移除一个炸弹，则在此处跳出循环
+            }
+        }
+    }
+
 }
