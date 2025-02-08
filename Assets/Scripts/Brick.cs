@@ -14,7 +14,7 @@ public class Brick : MonoBehaviour
             var obj = Instantiate(list[3], transform.position, Quaternion.identity);
             obj.GetComponent<BoxCollider>().isTrigger = false;
 
-            int item = MyCustomMap.GetItem(transform.position);
+            int item = MyCustomMap.GetBonusType(transform.position);
 
             if (item >= 0)
                 Instantiate(list[item - 1], transform.position, Quaternion.identity);

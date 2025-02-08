@@ -26,6 +26,7 @@ public class EnemyController : MonoBehaviour
     private Vector3 next_pos;
     private Vector3 next_dir;
     private List<Vector3> path = new List<Vector3>();
+    private Vector3 prev_pos;
 
     private struct Distance
     {
@@ -54,122 +55,64 @@ public class EnemyController : MonoBehaviour
     {
         animator.SetBool("Walking", false);
 
-        switch (state)
+        int agentPos = 0;
+        if(transform.position.x < 3 && transform.position.z < 3)
         {
-            case Status.Dodge:
+            agentPos = 1; // left down
+        }else if(transform.position.x < 3 && transform.position.z > 18)
+        {
+            agentPos = 2; // right down
+        }else if(transform.position. x > 18 && transform.position.z < 3)
+        {
+            agentPos = 3; // left up
+        }else if(transform.position.x > 18 && transform.position. z > 18)
+        {
+            agentPos = 4; // right up
+        }
+
+        if (!CanPlaceBomb())
+        {
+            // move to any bomb-free path
+            //no bomb can be placed.
+            detections = FindNearCollisions(transform.position);
+
+            if (HasTag(detections, "Bomb"))
+            {
+                NextDodgeLocation(detections);
                 MovePlayer(next_dir, next_pos);
-                break;
-            case Status.Center:
-                MovePlayer(next_dir, Round(transform.position));
-                break;
-            case Status.FollowPlayer:
+                return;
+            }
+            else if (HasTag(detections, "PowerUp"))
+            {
+                int count = detections.Count;
+
+                for (int k = 0; k < count; k++)
+                {
+                    if (string.Compare(detections[k].tag, "PowerUp") == 0)
+                    {
+                        path.Clear();
+                        path.Add(transform.position + detections[k].dir);
+                        MovePath();
+                        break;
+                    }
+                }
+            }
+            else
+            {
                 MovePath();
-                break;
-            case Status.Bomb:
-                DropBomb();
-                on_bomb = true;
-                state = Status.Idle;
-                break;
-
-            case Status.Idle:
-
-                detections = FindNearCollisions(transform.position);
-
-                if (dodge)
-                {
-                    if (HasTag(detections, "Bomb") || on_bomb)
-                    {
-                        on_bomb = false;
-                        NextDodgeLocation(detections);
-
-                        state = Status.Dodge;
-                        break;
-                    }
-                    else
-                    {
-                        if (bombs.Count > 0 && !HasBombsActive()) 
-                            bombs.Clear();
-                    }
-                }
-
-                if (powerup)
-                {
-                    if (HasTag(detections, "PowerUp"))
-                    {
-                        int count = detections.Count;
-
-                        for(int k = 0; k < count; k++)
-                        {
-                            if (string.Compare(detections[k].tag, "PowerUp") == 0)
-                            {
-                                path.Clear();
-                                path.Add(transform.position + detections[k].dir);
-                                state = Status.FollowPlayer;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (bomb && mode != PlayerType.Passive) // 在 Passive 模式下禁用炸弹放置
-                {
-                    if (player.avalibleBomb != 0 && CanPlaceBomb())
-                    {
-                        state = Status.Bomb;
-                        break;
-                    }
-                }
-
-                if (follow)
-                {
-                    if (path.Count == 0)
-                    {
-                        switch (mode)
-                        {
-                            case PlayerType.Aggressive:
-                                var src = FindObjectsOfType<PlayerController>();
-                                int len = src.Length;
-
-                                for (int j = 0; j < len; j++)
-                                {
-                                    if (src[j].isActiveAndEnabled)
-                                    {
-                                        path = FollowLocation(transform.position, Round(src[j].transform.position));
-                                        break;
-                                    }
-                                }
-
-                                break;
-                            case PlayerType.Random:
-                                path = FollowLocation(transform.position, FindRandomWalk());
-                                break;
-                            case PlayerType.Farm:
-                                path = GetClosestBreakable(Round(transform.position), detections);
-                                break;
-                            case PlayerType.Survivor:
-                                path = GetSafePosition(transform.position);
-                                break;
-                            case PlayerType.Passive: // 新增：只移动，不放炸弹
-                                path = FollowLocation(transform.position, FindRandomWalk());
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        if (Vector3.Distance(transform.position, path[0]) > 1)
-                            path.Clear();
-                        else
-                        {
-                            state = Status.FollowPlayer;
-                            break;
-                        }
-                    }
-                }
-
-                if (transform.position != Round(transform.position))
-                    state = Status.Center;
-
-                break;
+                if (bombs.Count > 0 && !HasBombsActive())
+                    bombs.Clear();
+            }
+            return;
+        }else{
+            //2 drop a bomb
+            //FIXME: should drop a bomb
+            //DropBomb();
+            //3 run away to dodge the bomb.
+            detections = FindNearCollisions(transform.position);
+            NextDodgeLocation(detections);
+            MovePlayer(next_dir, next_pos);
+            return; 
         }
     }
 
@@ -260,7 +203,7 @@ public class EnemyController : MonoBehaviour
             foreach (Distance d in FindNearCollisions(currentpos))
             {
                 Vector3 temp_pos = Round(currentpos + d.dir);
-                if (MyCustomMap.CanWalk((int)temp_pos.x, (int)temp_pos.z))
+                if (MyCustomMap.CanWalk(temp_pos))
                 {
                     if (Math.Abs(goal.x - temp_pos.x) < Math.Abs(goal.x - currentpos.x) ||
                     Math.Abs(goal.z - temp_pos.z) < Math.Abs(goal.z - currentpos.z))
@@ -290,7 +233,7 @@ public class EnemyController : MonoBehaviour
         {
             Vector3 test = new Vector3(UnityEngine.Random.Range(1, m.size - 1), 0, UnityEngine.Random.Range(1, m.size - 1));
 
-            if (MyCustomMap.CanWalk((int)test.x, (int)test.z))
+            if (MyCustomMap.CanWalk(test))
             {
                 found = true;
                 res = test;
@@ -353,36 +296,48 @@ public class EnemyController : MonoBehaviour
 
     private void MovePath()
     {
+        // 随机选一个方向
+        Vector3[] locations= new Vector3[4]; 
+        //right
+        locations[0].x = transform.position.x + 1;
+        locations[0].y = transform.position.y ;
+        locations[0].z = transform.position.z ;
+        //left
+        locations[1].x = transform.position.x - 1;
+        locations[1].y = transform.position.y ;
+        locations[1].z = transform.position.z ;
+        //up
+        locations[2].x = transform.position.x ;
+        locations[2].y = transform.position.y ;
+        locations[2].z = transform.position.z + 1;
+        //down
+        locations[3].x = transform.position.x ;
+        locations[3].y = transform.position.y ;
+        locations[3].z = transform.position.z - 1;
 
-        if (path.Count != 0)
+
+        
+        // 上下左右
+        // 如果有一个可以走
+
+        for(int i = 0; i < 4; i++)
         {
-            Vector3 direction = (path[0] - Round(transform.position)).normalized;
-            var temp = FindNearCollisions(path[0]);
+            Vector3 nextLocation = locations[i];
+            Vector3 direction = (nextLocation - Round(transform.position)).normalized;
 
-            var temp2 = FindNearCollisions(transform.position);
-            bool temp2_res = false;
-
-            foreach(Distance d in temp2)
+            if(MyCustomMap.CanWalk(nextLocation))
             {
-                if (d.dir == direction && d.dist == 0 && d.tag != "PowerUp")
-                    temp2_res = true;
+                if(!isMoveBackward(nextLocation))
+                {
+                    MovePlayer(direction, nextLocation);
+                    break;
+                }
             }
-
-            if (!HasTag(temp, "Bomb") && !HasTag(temp, "Explosion") && !temp2_res)
-                MovePlayer(direction, path[0]);
-            else
-            {
-                if (transform.position != Round(transform.position))
-                    state = Status.Center;
-                else
-                    state = Status.Idle;
-            }
-            
-            if (Vector3.Distance(transform.position, path[0]) == 0)
-                path.RemoveAt(0);
         }
-        else
-            state = Status.Idle;
+
+        // 走过去
+        // 如果没有就呆住
+        
     }
 
     private void TestBomb()
@@ -449,6 +404,9 @@ public class EnemyController : MonoBehaviour
 
     private bool CanPlaceBomb()
     {
+        if(player.avalibleBomb == 0){
+            return false;
+        }
         detections = FindNearCollisions(transform.position);
 
         for (int k = 0; k < detections.Count; k++)
@@ -535,10 +493,25 @@ public class EnemyController : MonoBehaviour
         }
     }
 
+    private bool isMoveBackward(Vector3 position)
+    {
+        if(Vector3.Distance(position, prev_pos) < 0.5f){
+            // move back ? NO
+            return true;
+        }else{
+            return false;
+        }
+    }
     private void MovePlayer(Vector3 direction, Vector3 position)
     {
-        Vector3 movePosition = Vector3.MoveTowards(transform.position, position, (player.moveSpeed / 2) * Time.deltaTime);
+        float maxDelta = (player.moveSpeed / 2) * Time.deltaTime;
+        Vector3 movePosition = Vector3.MoveTowards(transform.position, position, maxDelta);
+        prev_pos = transform.position;        
         transform.position = movePosition;
+        //inform the custom map to update agent position
+        //FIXME: Collision will be triggered.
+        //change the board there, not here.        
+        MyCustomMap.MoveAgent(prev_pos, movePosition);
 
         if (direction == Vector3.forward)
             transform.rotation = Quaternion.Euler(0, 0, 0);
@@ -566,6 +539,14 @@ public class EnemyController : MonoBehaviour
         return false;
     }
 
+    //
+    //                |-------O---------|
+    //                |       |         |
+    //                O-----(pos)-------O 
+    //                |       |         |
+    //                |-------O---------| 
+    //
+    // where pos==current location, O== current collision
     private List<Distance> FindNearCollisions(Vector3 pos)
     {
         var temp = new List<Distance>();

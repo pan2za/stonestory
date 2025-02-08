@@ -83,6 +83,9 @@ public class Bomb : MonoBehaviour
                 {
                     hit.collider.GetComponent<Brick>().Collide = true;
                     hit.collider.gameObject.SetActive(false);
+                    //reveal bonus in the board after bombing
+                    // 更新地图中的数据
+                    MyCustomMap.RevealBonus(transform.position);
                 }
                 else if (hit.collider.CompareTag("Player") || hit.collider.CompareTag("PowerUp") || hit.collider.CompareTag("Bomb"))
                 {

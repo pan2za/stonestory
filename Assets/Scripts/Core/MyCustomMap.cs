@@ -14,6 +14,12 @@ public class MyCustomMap
 
     static PommermanItem[,] board;
 
+    // All the bonus covered by Wood
+    // Should not be readable to anyone.
+    static PommermanItem[,] hiddenBonus;
+
+    static int playerId ;
+
     public static void CreateMap(int mapSize)
     {
         size = mapSize;
@@ -23,13 +29,25 @@ public class MyCustomMap
         
         board = new PommermanItem[size, size];
 
+        hiddenBonus = new PommermanItem[size, size];
+
         int players = MyPlayerPrefs.GetPlayers();
 
         var temp = new Vector2[]
         {
+            // players position
+            // z
+            // ^
+            // |
+            // 2------3
+            // |------|
+            // 1------4
+            // ----------> x
+            // note: x is horizontal.
+            // z is vertical.
             new Vector2(1f, 1f),
-            new Vector2(size - 2, size - 2),
             new Vector2(1f, size - 2),
+            new Vector2(size - 2, size - 2),
             new Vector2(size - 2, 1f),
 
             new Vector2(half, half),
@@ -60,9 +78,43 @@ public class MyCustomMap
             {
                 int x = Mathf.RoundToInt(list[j].x);
                 int y = Mathf.RoundToInt(list[j].y);
-                map[x * size + y] = Block.Born;
-                board[x, y] = PommermanItem.Agent0 + i;                
+                map[x * size + y] = Block.Born;     
+                board[x, y] = PommermanItem.Passage;           
             }
+        }
+
+        // 根据随机设置的玩家位置，调整ID
+        // adjust agent id by random player position.
+        // playerId from 1 to 4.
+        if(playerId == 0)
+        {
+            playerId = Random.Range(0, players) + 1;
+        }
+        // Agent0 position
+        board[Mathf.RoundToInt(temp[playerId - 1].x), Mathf.RoundToInt(temp[playerId - 1].y)] = PommermanItem.Agent0 ;
+        // Agent1~Agent3 position
+        Vector2[] enemyPositions = new Vector2[players];
+        //agent0, agent1, agent2, agent3
+        if(playerId - 1 == 0){
+            for(int i = 0; i < players - 1; i++)
+            {
+                enemyPositions[i] = temp[i + 1];
+            }
+        }else{
+            //agent1, agent2, agent0, agent3
+            //                playerId-1,
+            int j = 0;
+            for(int i = 0; i < players; i++)
+            {
+                if(i == playerId -1){
+                    continue;
+                }
+                enemyPositions[j++] = temp[i];
+            }
+        }
+        for (int i = 0; i < players - 1; i++)
+        {
+            board[Mathf.RoundToInt(enemyPositions[i].x), Mathf.RoundToInt(enemyPositions[i].y)] = PommermanItem.Agent1 + i; 
         }
 
         // 设置地图边界为墙壁
@@ -124,7 +176,7 @@ public class MyCustomMap
         else if(mapSize == 15)
             GenItems(new int[] { 14, 10, 12 }, 2);
         else
-            GenItems(new int[] { 12, 8, 10 }, 2);
+            GenItems(new int[] { 2, 3, 4 }, 2);
     }
 
     static void GenItems(int[] powersUp, int distance)
@@ -167,8 +219,9 @@ public class MyCustomMap
 
             do
             {
-                if (map[index] == Block.Breakable)
+                if (board[dx, dy] == PommermanItem.Wood)
                 {
+                    // board MUST BE Wood, since all the bonus toys should be hidden to anyone.
                     done = true;
 
                     for(int j = 0; j < list.Count; j++)
@@ -194,7 +247,7 @@ public class MyCustomMap
                         };
 
                         list.Add(powerUp);
-                        board[dx, dy] = ToPommermanItem(bonusType);
+                        hiddenBonus[dx, dy] = ToPommermanItem(bonusType);
                     }
                 }
 
@@ -230,10 +283,13 @@ public class MyCustomMap
         return map[index];
     }
 
-    public static bool CanWalk(int j, int k)
+    public static bool CanWalk(Vector3 position)
     {
-        int index = size * j + k;
-        return map[index] != Block.Wall;
+        PommermanItem pommermanItem = board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)];
+        return pommermanItem == PommermanItem.Passage
+                || pommermanItem == PommermanItem.IncrRange 
+                || pommermanItem == PommermanItem.ExtraBomb 
+                || pommermanItem == PommermanItem.Kick;
     }
 
     static Vector2[] FindLocation(Vector2 pos)
@@ -275,5 +331,102 @@ public class MyCustomMap
             default:
                 return PommermanItem.Passage;
         }
+    }
+    public static int GetPlayerId()
+    {
+        if(playerId == 0)
+        {
+            int players = MyPlayerPrefs.GetPlayers();
+            playerId = Random.Range(0, players) + 1;
+        }
+        return playerId;
+    }
+
+    public static int GetBonusType(Vector3 position)
+    {
+        PommermanItem item = hiddenBonus[(int)position.x, (int)position.z];
+        switch(item){
+            case PommermanItem.ExtraBomb:
+                return (int)BonusType.ExtraBomb;
+            case PommermanItem.IncrRange:
+                return (int)BonusType.IncrRange;
+            case PommermanItem.Kick:
+                return (int)BonusType.Kick;
+            default:
+                return -1;
+        }
+    }
+
+    //Should I change all the board[x, z] from board[(int)x, (int)z]
+    // to
+    // board[Mathf.RoundToInt(x), Mathf.RoundToInt(z)]?
+    // YES, I THINK SO.
+    public static void RevealBonus(Vector3 position)
+    {
+        // remove the wood from the board
+        // remove item in the hiddenBonus
+        // add item to the board
+        // reveal board <=== hiddenBonus
+        board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
+        PommermanItem item = hiddenBonus[(int)position.x, (int)position.z];
+        switch(item){
+            case PommermanItem.ExtraBomb:               
+            case PommermanItem.IncrRange:
+            case PommermanItem.Kick:
+                hiddenBonus[(int)position.x, (int)position.z] = PommermanItem.Passage;
+                board[(int)position.x , (int)position.z] = item;
+                break;
+            default:
+                //not found any bonus item
+                // so I will do nothing
+                return;
+        }        
+    }
+    public static void RemoveBonus(Vector3 position)
+    {
+        //change bonus to passage 
+        // because of bombing .
+        board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
+    }
+    public static void EatBonus(Vector3 position, Vector3 playerLocation)
+    {
+        //change bonus to player 
+        // because of player collising.
+        PommermanItem item = board[Mathf.RoundToInt(playerLocation.x), Mathf.RoundToInt(playerLocation.z)];
+        bool crazy = false;
+        if(item >= PommermanItem.Agent0 && item <= PommermanItem.Agent3)
+        {
+            board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = item;
+            //FIXME: player prev positon should be set to passage.
+            board[Mathf.RoundToInt(playerLocation.x), Mathf.RoundToInt(playerLocation.z)] = PommermanItem.Passage;
+        }else{
+            //I am crazy
+            crazy = true;
+        }
+    }
+    public static void MoveAgent(Vector3 prevLocation, Vector3 currLocation)
+    {
+        PommermanItem item = board[Mathf.RoundToInt(prevLocation.x) , Mathf.RoundToInt(prevLocation.z)];
+        PommermanItem currItem = board[Mathf.RoundToInt(currLocation.x) , Mathf.RoundToInt(currLocation.z)];
+        bool crazy = false;
+        if(item >= PommermanItem.Agent0 && item <= PommermanItem.Agent3)
+        {
+            //I, the agent stay there before.
+            if(currItem == PommermanItem.Passage || currItem == PommermanItem.ExtraBomb || currItem == PommermanItem.IncrRange || currItem == PommermanItem.Kick)
+            {
+                // current Item is passage or bonus
+                board[Mathf.RoundToInt(prevLocation.x) , Mathf.RoundToInt(prevLocation.z)] = PommermanItem.Passage;
+                board[Mathf.RoundToInt(currLocation.x) , Mathf.RoundToInt(currLocation.z)] = item;
+            }
+        }else{
+            // What's wrong?
+            // Unbelievable!
+            crazy = true;
+        }
+    }
+    public static void SetBoard(Vector3 position, PommermanItem item)
+    {
+        //use round function, not use (int) conversion.
+        board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = item;
     }
 }

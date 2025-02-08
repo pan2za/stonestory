@@ -25,6 +25,8 @@ public class PlayerController : MonoBehaviour
     // 存储所有炸弹位置的列表
     private List<Vector3> bombPositions = new List<Vector3>();
 
+    private Vector3 prevPosition ;
+
     public void Start()
     {
         player = GetComponent<PlayerUnit>();
@@ -37,6 +39,8 @@ public class PlayerController : MonoBehaviour
         joystick = FindObjectOfType<DynamicJoystick>();
 
         bombPositions = new List<Vector3>();
+
+        prevPosition = transform.position;
     }
 
     private bool GetKey(Joypad key)
@@ -68,32 +72,106 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     private void UpdateMovement()
     {
-        if (Input.GetKey (KeyCode.UpArrow) || GetKey(Joypad.UpArrow))
+        int x = Mathf.RoundToInt(transform.position.x) - Mathf.RoundToInt(prevPosition.x);
+        int z = Mathf.RoundToInt(transform.position.z) - Mathf.RoundToInt(prevPosition.z);
+        if (Input.GetKey (KeyCode.UpArrow) || GetKey(Joypad.UpArrow) || Input.GetKey (KeyCode.W))
         {
             rigidBody.velocity = new Vector3(rigidBody.velocity.x, rigidBody.velocity.y, player.moveSpeed);
             myTransform.rotation = Quaternion.Euler (0, 0, 0);
             animator.SetBool ("Walking", true);
+            //if stay in its round position, I should not change board
+            // if from prevPositon to current position when direction > 1
+            // for example, from 1.3 -> 1.52
+
+            if(x == 0 && z == 0)
+            {
+                // stay in its circle.
+                // Do nothing.
+            }else{
+                // do everything......
+                // change prevPosition to passage
+                // change currPosition to Agent0
+
+                //FIXME: when should I check collision?
+                MyCustomMap.SetBoard(prevPosition, PommermanItem.Passage);
+                MyCustomMap.SetBoard(transform.position, PommermanItem.Agent0);
+            }
+            prevPosition = transform.position;
         }
 
-        if (Input.GetKey(KeyCode.LeftArrow) || GetKey(Joypad.LeftArrow))
+        if (Input.GetKey(KeyCode.LeftArrow) || GetKey(Joypad.LeftArrow)|| Input.GetKey (KeyCode.A))
         {
             rigidBody.velocity = new Vector3 (-player.moveSpeed, rigidBody.velocity.y, rigidBody.velocity.z);
             myTransform.rotation = Quaternion.Euler (0, 270, 0);
             animator.SetBool ("Walking", true);
+            //if stay in its round position, I should not change board
+            // if from prevPositon to current position when direction > 1
+            // for example, from 1.3 -> 1.52
+
+            if(x == 0 && z == 0)
+            {
+                // stay in its circle.
+                // Do nothing.
+            }else{
+                // do everything......
+                // change prevPosition to passage
+                // change currPosition to Agent0
+
+                //FIXME: when should I check collision?
+                MyCustomMap.SetBoard(prevPosition, PommermanItem.Passage);
+                MyCustomMap.SetBoard(transform.position, PommermanItem.Agent0);
+            }
+            prevPosition = transform.position;
         }
 
-        if (Input.GetKey(KeyCode.DownArrow) || GetKey(Joypad.DownArrow))
+        if (Input.GetKey(KeyCode.DownArrow) || GetKey(Joypad.DownArrow)|| Input.GetKey (KeyCode.S))
         {
             rigidBody.velocity = new Vector3(rigidBody.velocity.x, rigidBody.velocity.y, -player.moveSpeed);
             myTransform.rotation = Quaternion.Euler(0, 180, 0);
             animator.SetBool("Walking", true);
+            //if stay in its round position, I should not change board
+            // if from prevPositon to current position when direction > 1
+            // for example, from 1.3 -> 1.52
+
+            if(x == 0 && z == 0)
+            {
+                // stay in its circle.
+                // Do nothing.
+            }else{
+                // do everything......
+                // change prevPosition to passage
+                // change currPosition to Agent0
+
+                //FIXME: when should I check collision?
+                MyCustomMap.SetBoard(prevPosition, PommermanItem.Passage);
+                MyCustomMap.SetBoard(transform.position, PommermanItem.Agent0);
+            }
+            prevPosition = transform.position;
         }
 
-        if (Input.GetKey (KeyCode.RightArrow) || GetKey(Joypad.RightArrow))
+        if (Input.GetKey (KeyCode.RightArrow) || GetKey(Joypad.RightArrow)|| Input.GetKey (KeyCode.D))
         {
             rigidBody.velocity = new Vector3(player.moveSpeed, rigidBody.velocity.y, rigidBody.velocity.z);
             myTransform.rotation = Quaternion.Euler(0, 90, 0);
             animator.SetBool("Walking", true);
+            //if stay in its round position, I should not change board
+            // if from prevPositon to current position when direction > 1
+            // for example, from 1.3 -> 1.52
+
+            if(x == 0 && z == 0)
+            {
+                // stay in its circle.
+                // Do nothing.
+            }else{
+                // do everything......
+                // change prevPosition to passage
+                // change currPosition to Agent0
+
+                //FIXME: when should I check collision?
+                MyCustomMap.SetBoard(prevPosition, PommermanItem.Passage);
+                MyCustomMap.SetBoard(transform.position, PommermanItem.Agent0);
+            }
+            prevPosition = transform.position;
         }
 
         if (canDropBombs && (Input.GetKeyDown(KeyCode.Space) || GetActionKey()))
@@ -136,7 +214,7 @@ public class PlayerController : MonoBehaviour
     public void OnBombExploded(Vector3 bombPosition)
     {
         // 找到并移除炸弹的位置
-        var newPosition = new Vector2(Mathf.RoundToInt(myTransform.position.x), Mathf.RoundToInt(myTransform.position.z));
+        var newPosition = new Vector2(Mathf.RoundToInt(bombPosition.x), Mathf.RoundToInt(bombPosition.z));
         RemoveBombAtPosition(newPosition);
     }    
     
@@ -156,6 +234,7 @@ public class PlayerController : MonoBehaviour
     public void RemoveBombAtPosition(Vector2 position)
     {
         // 从最后一个元素开始向前遍历
+        bombs = FindObjectOfType<LoadMap>().BombList;
         for (int i = bombs.Count - 1; i >= 0; i--)
         {
             if (bombs[i].position == position)

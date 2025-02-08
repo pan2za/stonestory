@@ -23,6 +23,7 @@ public class Bonus : MonoBehaviour
         if(other.CompareTag("Player"))
         {
             Destroy(gameObject);
+            MyCustomMap.EatBonus(transform.position, other.transform.position);
             var player = other.GetComponent<PlayerUnit>();
             animator.SetBool("Done", false);
 
@@ -45,7 +46,11 @@ public class Bonus : MonoBehaviour
         else if(other.CompareTag("Explosion"))
         {
             var box = other.gameObject.GetComponent<BoxCollider>();
-            if (box.isTrigger) Destroy(gameObject);
+            if (box.isTrigger)
+            {
+                Destroy(gameObject);
+                MyCustomMap.RemoveBonus(transform.position);
+            } 
         }
     }
 }

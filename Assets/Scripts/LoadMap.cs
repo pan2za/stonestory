@@ -13,7 +13,7 @@ public class LoadMap : MonoBehaviour
 
     public int Players;
     public int PlayerId;
-    public int size = 23;
+    public int size = 11;
 
     public void Awake()
     {
@@ -25,7 +25,7 @@ public class LoadMap : MonoBehaviour
         Players = MyPlayerPrefs.GetPlayers();
 
         if (Players == 0) Application.Quit(0);
-        size = Players <= 4 ? 23 : 25;
+        size = Players <= 4 ? 11 : 13;
         LoadGame();
     }
 
@@ -66,9 +66,10 @@ public class LoadMap : MonoBehaviour
             {
                 player.GetComponent<PlayerController>().enabled = false;
                 player.GetComponent<EnemyController>().enabled = true;
-                //FIXME: player.GetComponent<EnemyController>().mode = (PlayerType)Random.Range(0, 4);
+                // player.GetComponent<EnemyController>().mode = (PlayerType)Random.Range(0, 3);
+                //FIXME: remove farm mode
                 //修改为只移动，不放炸弹模式
-                player.GetComponent<EnemyController>().mode = PlayerType.Passive;
+                player.GetComponent<EnemyController>().mode = PlayerType.Aggressive;
             }
             else
             {
