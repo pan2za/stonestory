@@ -17,7 +17,13 @@ public class Brick : MonoBehaviour
             int item = MyCustomMap.GetBonusType(transform.position);
 
             if (item >= 0)
+            {
                 Instantiate(list[item - 1], transform.position, Quaternion.identity);
+            }else{
+                //board from brick to passage.
+                MyCustomMap.SetBoard(transform.position, PommermanItem.Passage);
+            }
+
 
             Destroy(gameObject);
         }

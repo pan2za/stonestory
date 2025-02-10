@@ -109,9 +109,7 @@ public class EnemyController : MonoBehaviour
             //FIXME: should drop a bomb
             //DropBomb();
             //3 run away to dodge the bomb.
-            detections = FindNearCollisions(transform.position);
-            NextDodgeLocation(detections);
-            MovePlayer(next_dir, next_pos);
+            MovePath();
             return; 
         }
     }
@@ -203,7 +201,7 @@ public class EnemyController : MonoBehaviour
             foreach (Distance d in FindNearCollisions(currentpos))
             {
                 Vector3 temp_pos = Round(currentpos + d.dir);
-                if (MyCustomMap.CanWalk(temp_pos))
+                if (MyCustomMap.CanWalk(startpos, temp_pos))
                 {
                     if (Math.Abs(goal.x - temp_pos.x) < Math.Abs(goal.x - currentpos.x) ||
                     Math.Abs(goal.z - temp_pos.z) < Math.Abs(goal.z - currentpos.z))
@@ -233,7 +231,7 @@ public class EnemyController : MonoBehaviour
         {
             Vector3 test = new Vector3(UnityEngine.Random.Range(1, m.size - 1), 0, UnityEngine.Random.Range(1, m.size - 1));
 
-            if (MyCustomMap.CanWalk(test))
+            if (MyCustomMap.CanWalk(transform.position, test))
             {
                 found = true;
                 res = test;
@@ -296,45 +294,91 @@ public class EnemyController : MonoBehaviour
 
     private void MovePath()
     {
+        //1 I will go 4 directions
+        //2 select 1 direction
+        //3 calculate the next position
+        //4 Can the next position walk?
+        //5 no?yes, if yes, step6
+        //6 Can the next position a dodge position?
+        //7 no?yes, if yes, go
+
+        //FIXME: IS THERE A BOMB NEARBY?
+        //IF THERE IS A BOMB
+        //DODGE IT
+        //
+        //detections = FindNearCollisions(transform.position);
+        //NextDodgeLocation(detections);
+        //MovePlayer(next_dir, next_pos);
         // 随机选一个方向
         Vector3[] locations= new Vector3[4]; 
+        float maxDelta = (player.moveSpeed / 2) * Time.deltaTime;
         //right
-        locations[0].x = transform.position.x + 1;
+        locations[0].x = transform.position.x + maxDelta;
         locations[0].y = transform.position.y ;
         locations[0].z = transform.position.z ;
         //left
-        locations[1].x = transform.position.x - 1;
+        locations[1].x = transform.position.x - maxDelta;
         locations[1].y = transform.position.y ;
         locations[1].z = transform.position.z ;
         //up
         locations[2].x = transform.position.x ;
         locations[2].y = transform.position.y ;
-        locations[2].z = transform.position.z + 1;
+        locations[2].z = transform.position.z + maxDelta;
         //down
         locations[3].x = transform.position.x ;
         locations[3].y = transform.position.y ;
-        locations[3].z = transform.position.z - 1;
-
-
-        
+        locations[3].z = transform.position.z - maxDelta;
+       
         // 上下左右
         // 如果有一个可以走
-
+        // if MUST move backward, I will move backward.
+        // if I can move to another way, I will not move backward.
+        int count = 0;
         for(int i = 0; i < 4; i++)
         {
             Vector3 nextLocation = locations[i];
-            Vector3 direction = (nextLocation - Round(transform.position)).normalized;
+            Vector3 direction = (nextLocation - transform.position).normalized;
 
-            if(MyCustomMap.CanWalk(nextLocation))
+            if(MyCustomMap.CanWalk(transform.position, nextLocation))
             {
-                if(!isMoveBackward(nextLocation))
+                count++;
+            }
+        }
+
+        if(count == 0)
+        {
+            // Can't Move....
+            // Stuck here.
+        }else if(count == 1){
+            // move this way
+            for(int i = 0; i < 4; i++)
+            {
+                Vector3 nextLocation = locations[i];
+                Vector3 direction = (nextLocation - transform.position).normalized;
+
+                if(MyCustomMap.CanWalk(transform.position, nextLocation))
                 {
                     MovePlayer(direction, nextLocation);
                     break;
                 }
+            }            
+        }else{
+            // move forward, will not move backward..
+            for(int i = 0; i < 4; i++)
+            {
+                Vector3 nextLocation = locations[i];
+                Vector3 direction = (nextLocation - transform.position).normalized;
+
+                if(MyCustomMap.CanWalk(transform.position, nextLocation))
+                {
+                    if(!isMoveBackward(nextLocation))
+                    {
+                        MovePlayer(direction, nextLocation);
+                        break;
+                    }
+                }
             }
         }
-
         // 走过去
         // 如果没有就呆住
         
@@ -495,7 +539,9 @@ public class EnemyController : MonoBehaviour
 
     private bool isMoveBackward(Vector3 position)
     {
-        if(Vector3.Distance(position, prev_pos) < 0.5f){
+        //FIXME: the move back logic is always wrong!
+        float maxDelta = (player.moveSpeed / 2) * Time.deltaTime;
+        if(Vector3.Distance(position, prev_pos) < maxDelta){
             // move back ? NO
             return true;
         }else{
@@ -511,8 +557,21 @@ public class EnemyController : MonoBehaviour
         //inform the custom map to update agent position
         //FIXME: Collision will be triggered.
         //change the board there, not here.        
-        MyCustomMap.MoveAgent(prev_pos, movePosition);
+        int x = Mathf.RoundToInt(transform.position.x) - Mathf.RoundToInt(prev_pos.x);
+        int z = Mathf.RoundToInt(transform.position.z) - Mathf.RoundToInt(prev_pos.z);
+        if(x == 0 && z == 0)
+        {
+            // stay in its circle.
+            // Do nothing.
+        }else{
+            // do everything......
+            // change prevPosition to passage
+            // change currPosition to Agent0
 
+            //FIXME: when should I check collision?
+            MyCustomMap.UpdateAgent(prev_pos, movePosition);
+            MyCustomMap.SetBoard(prev_pos, PommermanItem.Passage);
+        }
         if (direction == Vector3.forward)
             transform.rotation = Quaternion.Euler(0, 0, 0);
         else if (direction == Vector3.back)

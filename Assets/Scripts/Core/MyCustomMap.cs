@@ -283,13 +283,19 @@ public class MyCustomMap
         return map[index];
     }
 
-    public static bool CanWalk(Vector3 position)
+    public static bool CanWalk(Vector3 currPos, Vector3 nextPos)
     {
-        PommermanItem pommermanItem = board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)];
-        return pommermanItem == PommermanItem.Passage
-                || pommermanItem == PommermanItem.IncrRange 
-                || pommermanItem == PommermanItem.ExtraBomb 
-                || pommermanItem == PommermanItem.Kick;
+        PommermanItem currItem = board[Mathf.RoundToInt(currPos.x), Mathf.RoundToInt(currPos.z)];
+        PommermanItem pommermanItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
+        if(currItem == pommermanItem && currItem >= PommermanItem.Agent0 && currItem <= PommermanItem.Agent3){
+            // agentX -> agentX
+            return true;
+        }else{
+            return pommermanItem == PommermanItem.Passage
+                    || pommermanItem == PommermanItem.IncrRange 
+                    || pommermanItem == PommermanItem.ExtraBomb 
+                    || pommermanItem == PommermanItem.Kick;
+        }
     }
 
     static Vector2[] FindLocation(Vector2 pos)
@@ -404,25 +410,11 @@ public class MyCustomMap
             crazy = true;
         }
     }
-    public static void MoveAgent(Vector3 prevLocation, Vector3 currLocation)
+    //change agent in the board from prevlocation to curr location.
+    public static void UpdateAgent(Vector3 prevLocation, Vector3 currLocation)
     {
         PommermanItem item = board[Mathf.RoundToInt(prevLocation.x) , Mathf.RoundToInt(prevLocation.z)];
-        PommermanItem currItem = board[Mathf.RoundToInt(currLocation.x) , Mathf.RoundToInt(currLocation.z)];
-        bool crazy = false;
-        if(item >= PommermanItem.Agent0 && item <= PommermanItem.Agent3)
-        {
-            //I, the agent stay there before.
-            if(currItem == PommermanItem.Passage || currItem == PommermanItem.ExtraBomb || currItem == PommermanItem.IncrRange || currItem == PommermanItem.Kick)
-            {
-                // current Item is passage or bonus
-                board[Mathf.RoundToInt(prevLocation.x) , Mathf.RoundToInt(prevLocation.z)] = PommermanItem.Passage;
-                board[Mathf.RoundToInt(currLocation.x) , Mathf.RoundToInt(currLocation.z)] = item;
-            }
-        }else{
-            // What's wrong?
-            // Unbelievable!
-            crazy = true;
-        }
+        board[Mathf.RoundToInt(currLocation.x) , Mathf.RoundToInt(currLocation.z)] = item;
     }
     public static void SetBoard(Vector3 position, PommermanItem item)
     {
