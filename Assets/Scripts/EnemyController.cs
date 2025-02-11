@@ -311,23 +311,23 @@ public class EnemyController : MonoBehaviour
         //MovePlayer(next_dir, next_pos);
         // 随机选一个方向
         Vector3[] locations= new Vector3[4]; 
-        float maxDelta = (player.moveSpeed / 2) * Time.deltaTime;
+        float maxDelta3 = (player.moveSpeed / 2) * Time.deltaTime ;
         //right
-        locations[0].x = transform.position.x + maxDelta;
+        locations[0].x = transform.position.x + maxDelta3;
         locations[0].y = transform.position.y ;
         locations[0].z = transform.position.z ;
         //left
-        locations[1].x = transform.position.x - maxDelta;
+        locations[1].x = transform.position.x - maxDelta3;
         locations[1].y = transform.position.y ;
         locations[1].z = transform.position.z ;
         //up
         locations[2].x = transform.position.x ;
         locations[2].y = transform.position.y ;
-        locations[2].z = transform.position.z + maxDelta;
+        locations[2].z = transform.position.z + maxDelta3;
         //down
         locations[3].x = transform.position.x ;
         locations[3].y = transform.position.y ;
-        locations[3].z = transform.position.z - maxDelta;
+        locations[3].z = transform.position.z - maxDelta3;
        
         // 上下左右
         // 如果有一个可以走
@@ -363,7 +363,9 @@ public class EnemyController : MonoBehaviour
                 }
             }            
         }else{
+            int randNum = UnityEngine.Random.Range(0, count);
             // move forward, will not move backward..
+            int j = 0;
             for(int i = 0; i < 4; i++)
             {
                 Vector3 nextLocation = locations[i];
@@ -371,11 +373,12 @@ public class EnemyController : MonoBehaviour
 
                 if(MyCustomMap.CanWalk(transform.position, nextLocation))
                 {
-                    if(!isMoveBackward(nextLocation))
+                    if(!isMoveBackward(nextLocation) )
                     {
                         MovePlayer(direction, nextLocation);
                         break;
                     }
+                    j++;
                 }
             }
         }

@@ -28,4 +28,5 @@ public enum PommermanItem
     // Wood + ExtraBomb will not revealed to anyone, but the programmer himself.
     // Wood + IncrRange
     //No Speed up
+    SpeedUp = 14,
 }

@@ -176,7 +176,7 @@ public class MyCustomMap
         else if(mapSize == 15)
             GenItems(new int[] { 14, 10, 12 }, 2);
         else
-            GenItems(new int[] { 2, 3, 4 }, 2);
+            GenItems(new int[] { 4, 4, 4 }, 2);
     }
 
     static void GenItems(int[] powersUp, int distance)
@@ -285,6 +285,10 @@ public class MyCustomMap
 
     public static bool CanWalk(Vector3 currPos, Vector3 nextPos)
     {
+        if(Mathf.RoundToInt(nextPos.x) < 0 || Mathf.RoundToInt(nextPos.z) < 0 || Mathf.RoundToInt(nextPos.x) > size - 1 || Mathf.RoundToInt(nextPos.z) > size - 1){
+            return false;
+        }
+
         PommermanItem currItem = board[Mathf.RoundToInt(currPos.x), Mathf.RoundToInt(currPos.z)];
         PommermanItem pommermanItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
         if(currItem == pommermanItem && currItem >= PommermanItem.Agent0 && currItem <= PommermanItem.Agent3){
@@ -333,7 +337,7 @@ public class MyCustomMap
                 // the speedup in this location,
                 // I should turn to Unity function itself
                 // or other variable.
-                return PommermanItem.Passage;
+                return PommermanItem.SpeedUp;
             default:
                 return PommermanItem.Passage;
         }
@@ -358,6 +362,8 @@ public class MyCustomMap
                 return (int)BonusType.IncrRange;
             case PommermanItem.Kick:
                 return (int)BonusType.Kick;
+            case PommermanItem.SpeedUp:
+                return (int)BonusType.SpeedUp;
             default:
                 return -1;
         }
@@ -393,6 +399,7 @@ public class MyCustomMap
         //change bonus to passage 
         // because of bombing .
         board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
+        hiddenBonus[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
     }
     public static void EatBonus(Vector3 position, Vector3 playerLocation)
     {
@@ -405,6 +412,7 @@ public class MyCustomMap
             board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = item;
             //FIXME: player prev positon should be set to passage.
             board[Mathf.RoundToInt(playerLocation.x), Mathf.RoundToInt(playerLocation.z)] = PommermanItem.Passage;
+            hiddenBonus[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
         }else{
             //I am crazy
             crazy = true;
