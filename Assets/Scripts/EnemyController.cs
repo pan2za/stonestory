@@ -26,7 +26,13 @@ public class EnemyController : MonoBehaviour
     private Vector3 next_pos;
     private Vector3 next_dir;
     private List<Vector3> path = new List<Vector3>();
-    private Vector3 prev_pos;
+    // previous mesh position
+    // 1 mesh = 60 frames.
+    // 1 mesh is a lattice of the bomberman.
+    private Vector3[] prevMeshPos = new Vector3[4];
+    //destination position of each agent.
+    private Vector3[] destinationPos = new Vector3[4];
+    private bool[] hasDestinationPos = new bool[4];
 
     private struct Distance
     {
@@ -49,6 +55,9 @@ public class EnemyController : MonoBehaviour
         follow = true;
         powerup = true;
         dodge = true;
+        for(int i = 0; i < 4; i++){
+            hasDestinationPos[i] = false;
+        }
     }
 
     public void Update()
@@ -294,6 +303,33 @@ public class EnemyController : MonoBehaviour
 
     private void MovePath()
     {
+        //if the destination has not been reached.
+        // the player should go to that destination.
+        
+        // destination is 1 mesh
+        //       ------
+        //       |    |  <----- a mesh
+        //       ------
+        //    a mesh = 60 frames
+        // while a MovePlayer only move 1 frame
+
+        if(hasDestinationPos[player.PlayerId - 1]){
+            if(Vector3.Distance(destinationPos[player.PlayerId - 1] , transform.position) > 0.1f){
+                Vector3 direction = (destinationPos[player.PlayerId - 1] - transform.position).normalized;
+                MovePlayer(direction, destinationPos[player.PlayerId - 1]);
+                return;
+            }else{
+                //so near, update..
+            }
+        }else{
+            // the first time.
+        }
+        if(transform.position.x < 5 && transform.position.z < 5){
+            Debug.Log(string.Format(" towards>> X:{0:F2},  Z:{1:F2}", 
+                destinationPos[player.PlayerId - 1].x, destinationPos[player.PlayerId - 1].z));
+        }
+        //else:
+
         //1 I will go 4 directions
         //2 select 1 direction
         //3 calculate the next position
@@ -311,7 +347,7 @@ public class EnemyController : MonoBehaviour
         //MovePlayer(next_dir, next_pos);
         // 随机选一个方向
         Vector3[] locations= new Vector3[4]; 
-        float maxDelta3 = (player.moveSpeed / 2) * Time.deltaTime ;
+        float maxDelta3 = 1;// (player.moveSpeed / 2) * Time.deltaTime ;
         //right
         locations[0].x = transform.position.x + maxDelta3;
         locations[0].y = transform.position.y ;
@@ -358,6 +394,9 @@ public class EnemyController : MonoBehaviour
 
                 if(MyCustomMap.CanWalk(transform.position, nextLocation))
                 {
+                    prevMeshPos[player.PlayerId - 1] = destinationPos[player.PlayerId - 1];
+                    destinationPos[player.PlayerId - 1] = locations[i];
+                    hasDestinationPos[player.PlayerId - 1] = true;
                     MovePlayer(direction, nextLocation);
                     break;
                 }
@@ -365,7 +404,6 @@ public class EnemyController : MonoBehaviour
         }else{
             int randNum = UnityEngine.Random.Range(0, count);
             // move forward, will not move backward..
-            int j = 0;
             for(int i = 0; i < 4; i++)
             {
                 Vector3 nextLocation = locations[i];
@@ -373,12 +411,34 @@ public class EnemyController : MonoBehaviour
 
                 if(MyCustomMap.CanWalk(transform.position, nextLocation))
                 {
-                    if(!isMoveBackward(nextLocation) )
+                    //the move back logic :
+                    // from source lattice to destination lattice
+                    // NOT from source frame to destination frame.
+                    // 
+                    //  ------>---------->|
+                    //                    |
+                    //          X<--------|
+                    //   IT'S NOT ALLOWED TO MOVE BACKWARDS
+                    // you should turn to other way
+                    //  for example, MOVE upwards
+                    //
+                    //                   V
+                    //                   ^|
+                    //                   ||
+                    //                   ||
+                    //  ------>---------->|
+                    //                    |
+                    //                    |
+                    //
+                    //
+                    if(Vector3.Distance(prevMeshPos[player.PlayerId - 1], locations[i]) > 0.1f)
                     {
+                        prevMeshPos[player.PlayerId - 1] = destinationPos[player.PlayerId - 1];
+                        destinationPos[player.PlayerId - 1] = locations[i];
+                        hasDestinationPos[player.PlayerId - 1] = true;
                         MovePlayer(direction, nextLocation);
                         break;
                     }
-                    j++;
                 }
             }
         }
@@ -540,28 +600,24 @@ public class EnemyController : MonoBehaviour
         }
     }
 
-    private bool isMoveBackward(Vector3 position)
-    {
-        //FIXME: the move back logic is always wrong!
-        float maxDelta = (player.moveSpeed / 2) * Time.deltaTime;
-        if(Vector3.Distance(position, prev_pos) < maxDelta){
-            // move back ? NO
-            return true;
-        }else{
-            return false;
-        }
-    }
     private void MovePlayer(Vector3 direction, Vector3 position)
     {
         float maxDelta = (player.moveSpeed / 2) * Time.deltaTime;
         Vector3 movePosition = Vector3.MoveTowards(transform.position, position, maxDelta);
-        prev_pos = transform.position;        
+        // 使用格式化字符串打印位置信息
+        // only debug the left top agent.
+        //if(transform.position.x < 5 && transform.position.z < 5){
+        //    Debug.Log(string.Format(" towards>> X:{0:F2}, Y:{1:F2}, Z:{2:F2}", 
+        //        transform.position.x, transform.position.y, transform.position.z));
+        //}
+
+        Vector3 prevPos = transform.position;        
         transform.position = movePosition;
         //inform the custom map to update agent position
         //FIXME: Collision will be triggered.
         //change the board there, not here.        
-        int x = Mathf.RoundToInt(transform.position.x) - Mathf.RoundToInt(prev_pos.x);
-        int z = Mathf.RoundToInt(transform.position.z) - Mathf.RoundToInt(prev_pos.z);
+        int x = Mathf.RoundToInt(transform.position.x) - Mathf.RoundToInt(prevPos.x);
+        int z = Mathf.RoundToInt(transform.position.z) - Mathf.RoundToInt(prevPos.z);
         if(x == 0 && z == 0)
         {
             // stay in its circle.
@@ -572,8 +628,8 @@ public class EnemyController : MonoBehaviour
             // change currPosition to Agent0
 
             //FIXME: when should I check collision?
-            MyCustomMap.UpdateAgent(prev_pos, movePosition);
-            MyCustomMap.SetBoard(prev_pos, PommermanItem.Passage);
+            MyCustomMap.UpdateAgent(prevPos, movePosition);
+            MyCustomMap.SetBoard(prevPos, PommermanItem.Passage);
         }
         if (direction == Vector3.forward)
             transform.rotation = Quaternion.Euler(0, 0, 0);
