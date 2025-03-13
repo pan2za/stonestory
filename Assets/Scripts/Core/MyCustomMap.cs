@@ -379,14 +379,17 @@ public class MyCustomMap
         // remove item in the hiddenBonus
         // add item to the board
         // reveal board <=== hiddenBonus
-        board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
-        PommermanItem item = hiddenBonus[(int)position.x, (int)position.z];
+        int x = Mathf.RoundToInt(position.x);
+        int z = Mathf.RoundToInt(position.z);
+        board[x, z] = PommermanItem.Passage;
+        PommermanItem item = hiddenBonus[x, z];
         switch(item){
             case PommermanItem.ExtraBomb:               
             case PommermanItem.IncrRange:
             case PommermanItem.Kick:
-                hiddenBonus[(int)position.x, (int)position.z] = PommermanItem.Passage;
-                board[(int)position.x , (int)position.z] = item;
+            case PommermanItem.SpeedUp:
+                hiddenBonus[x, z] = PommermanItem.Passage;
+                board[x , z] = item;
                 break;
             default:
                 //not found any bonus item

@@ -56,6 +56,7 @@ public class Bomb : MonoBehaviour
         player.avalibleBomb++;
         // 通知playerController炸弹已爆炸并移除其位置
         playerController.OnBombExploded(transform.position);
+        //reveal bonus in the board after bombing
     }
 
     public void OnTriggerEnter(Collider other)
@@ -83,13 +84,13 @@ public class Bomb : MonoBehaviour
                 {
                     hit.collider.GetComponent<Brick>().Collide = true;
                     hit.collider.gameObject.SetActive(false);
-                    //reveal bonus in the board after bombing
                     // 更新地图中的数据
-                    MyCustomMap.RevealBonus(transform.position);
+                    MyCustomMap.RevealBonus(transform.position + (i * direction));
                 }
                 else if (hit.collider.CompareTag("Player") || hit.collider.CompareTag("PowerUp") || hit.collider.CompareTag("Bomb"))
                 {
                     list.Add(transform.position + (i * direction));
+                    //FIXME:改为passage，表示被清除了。
                     continue;
                 }
 
