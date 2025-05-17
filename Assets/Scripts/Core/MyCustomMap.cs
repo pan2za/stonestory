@@ -12,11 +12,11 @@ public class MyCustomMap
     // 初始化游戏板
     // same as obs["board"]
 
-    static PommermanItem[,] board;
+    static ulong[,] board;
 
     // All the bonus covered by Wood
     // Should not be readable to anyone.
-    static PommermanItem[,] hiddenBonus;
+    static ulong[,] hiddenBonus;
 
     static int playerId ;
 
@@ -27,9 +27,9 @@ public class MyCustomMap
 
         map = new Block[size * size];
         
-        board = new PommermanItem[size, size];
+        board = new ulong[size, size];
 
-        hiddenBonus = new PommermanItem[size, size];
+        hiddenBonus = new ulong[size, size];
 
         int players = MyPlayerPrefs.GetPlayers();
 
@@ -58,6 +58,14 @@ public class MyCustomMap
             new Vector2(half, size - 2),
         };
 
+        // clear all
+        for (int i = 0; i < size; i++)
+        {
+            for (int j = 0; j < size; j++)
+            {
+                board[i, j] = 0;
+            }
+        }
         // 初始化地图为可破坏方块
         for (int i = 0; i < size; i++)
         {
@@ -65,7 +73,7 @@ public class MyCustomMap
             {
                 int index = i * size + j;
                 map[index] = Block.Breakable;
-                board[i, j] = PommermanItem.Wood;
+                SetCollisionBit(ref board[i, j], PommermanItem.Wood);
             }
         }
 
@@ -78,8 +86,8 @@ public class MyCustomMap
             {
                 int x = Mathf.RoundToInt(list[j].x);
                 int y = Mathf.RoundToInt(list[j].y);
-                map[x * size + y] = Block.Born;     
-                board[x, y] = PommermanItem.Passage;           
+                map[x * size + y] = Block.Born;    
+                SetCollisionBit(ref board[x, y], PommermanItem.Passage);          
             }
         }
 
@@ -91,7 +99,8 @@ public class MyCustomMap
             playerId = Random.Range(0, players) + 1;
         }
         // Agent0 position
-        board[Mathf.RoundToInt(temp[playerId - 1].x), Mathf.RoundToInt(temp[playerId - 1].y)] = PommermanItem.Agent0 ;
+
+        SetCollisionBit(ref board[Mathf.RoundToInt(temp[playerId - 1].x), Mathf.RoundToInt(temp[playerId - 1].y)], PommermanItem.Agent0) ;
         // Agent1~Agent3 position
         Vector2[] enemyPositions = new Vector2[players];
         //agent0, agent1, agent2, agent3
@@ -114,7 +123,7 @@ public class MyCustomMap
         }
         for (int i = 0; i < players - 1; i++)
         {
-            board[Mathf.RoundToInt(enemyPositions[i].x), Mathf.RoundToInt(enemyPositions[i].y)] = PommermanItem.Agent1 + i; 
+            SetBit(ref board[Mathf.RoundToInt(enemyPositions[i].x), Mathf.RoundToInt(enemyPositions[i].y)], PommermanItem.Agent1 + i); 
         }
 
         // 设置地图边界为墙壁
@@ -125,10 +134,10 @@ public class MyCustomMap
             map[i * size] = Block.Wall;
             map[i * size + size - 1] = Block.Wall;
 
-            board[i, 0] = PommermanItem.Rigid;
-            board[size -1, i] = PommermanItem.Rigid;
-            board[0, i] = PommermanItem.Rigid;
-            board[i, size - 1] = PommermanItem.Rigid;
+            SetCollisionBit(ref board[i, 0], PommermanItem.Rigid);
+            SetCollisionBit(ref board[size -1, i], PommermanItem.Rigid);
+            SetCollisionBit(ref board[0, i], PommermanItem.Rigid);
+            SetCollisionBit(ref board[i, size - 1], PommermanItem.Rigid);
         }
 
         // 随机生成墙壁，确保墙壁附近可通行
@@ -142,7 +151,7 @@ public class MyCustomMap
                     {
                         int index = i * size + j;
                         map[index] = Block.Wall;
-                        board[i, j] = PommermanItem.Rigid;
+                        SetCollisionBit(ref board[i, j], PommermanItem.Rigid);
                     }
                 }
             }
@@ -219,7 +228,7 @@ public class MyCustomMap
 
             do
             {
-                if (board[dx, dy] == PommermanItem.Wood)
+                if (IsBitSet(board[dx, dy], PommermanItem.Wood))
                 {
                     // board MUST BE Wood, since all the bonus toys should be hidden to anyone.
                     done = true;
@@ -247,7 +256,7 @@ public class MyCustomMap
                         };
 
                         list.Add(powerUp);
-                        hiddenBonus[dx, dy] = ToPommermanItem(bonusType);
+                        SetCollisionBit(ref hiddenBonus[dx, dy], ToPommermanItem(bonusType));
                     }
                 }
 
@@ -289,17 +298,9 @@ public class MyCustomMap
             return false;
         }
 
-        PommermanItem currItem = board[Mathf.RoundToInt(currPos.x), Mathf.RoundToInt(currPos.z)];
-        PommermanItem pommermanItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
-        if(currItem == pommermanItem && currItem >= PommermanItem.Agent0 && currItem <= PommermanItem.Agent3){
-            // agentX -> agentX
-            return true;
-        }else{
-            return pommermanItem == PommermanItem.Passage
-                    || pommermanItem == PommermanItem.IncrRange 
-                    || pommermanItem == PommermanItem.ExtraBomb 
-                    || pommermanItem == PommermanItem.Kick;
-        }
+        ulong currItem = board[Mathf.RoundToInt(currPos.x), Mathf.RoundToInt(currPos.z)];
+        ulong nextItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
+        return IsBitSet(nextItem, PommermanItem.Passage);
     }
 
     static Vector2[] FindLocation(Vector2 pos)
@@ -354,19 +355,20 @@ public class MyCustomMap
 
     public static int GetBonusType(Vector3 position)
     {
-        PommermanItem item = hiddenBonus[(int)position.x, (int)position.z];
-        switch(item){
-            case PommermanItem.ExtraBomb:
-                return (int)BonusType.ExtraBomb;
-            case PommermanItem.IncrRange:
-                return (int)BonusType.IncrRange;
-            case PommermanItem.Kick:
-                return (int)BonusType.Kick;
-            case PommermanItem.SpeedUp:
-                return (int)BonusType.SpeedUp;
-            default:
-                return -1;
+        ulong item = hiddenBonus[(int)position.x, (int)position.z];
+        if(IsBitSet(item, PommermanItem.ExtraBomb)){
+            return (int)BonusType.ExtraBomb;
         }
+        if(IsBitSet(item, PommermanItem.IncrRange)){
+            return (int)BonusType.IncrRange;
+        }
+        if(IsBitSet(item, PommermanItem.Kick)){
+            return (int)BonusType.Kick;
+        }
+        if(IsBitSet(item, PommermanItem.SpeedUp)){
+            return (int)BonusType.SpeedUp;
+        }
+        return -1;
     }
 
     //Should I change all the board[x, z] from board[(int)x, (int)z]
@@ -381,55 +383,165 @@ public class MyCustomMap
         // reveal board <=== hiddenBonus
         int x = Mathf.RoundToInt(position.x);
         int z = Mathf.RoundToInt(position.z);
-        board[x, z] = PommermanItem.Passage;
-        PommermanItem item = hiddenBonus[x, z];
-        switch(item){
-            case PommermanItem.ExtraBomb:               
-            case PommermanItem.IncrRange:
-            case PommermanItem.Kick:
-            case PommermanItem.SpeedUp:
-                hiddenBonus[x, z] = PommermanItem.Passage;
-                board[x , z] = item;
-                break;
-            default:
-                //not found any bonus item
-                // so I will do nothing
-                return;
-        }        
+        SetBit(ref board[x, z], PommermanItem.Passage);
+        ulong item = hiddenBonus[x, z];
+        if(IsBitSet(item, PommermanItem.ExtraBomb)){
+            SetBit(ref hiddenBonus[x, z], PommermanItem.Passage);
+            SetBit(ref board[x , z], PommermanItem.ExtraBomb);
+        }
+        if(IsBitSet(item, PommermanItem.IncrRange)){
+            SetBit(ref hiddenBonus[x, z], PommermanItem.Passage);
+            SetBit(ref board[x , z], PommermanItem.IncrRange);
+        }
+        if(IsBitSet(item, PommermanItem.Kick)){
+            SetBit(ref hiddenBonus[x, z], PommermanItem.Passage);
+            SetBit(ref board[x , z], PommermanItem.Kick);
+        }
+        if(IsBitSet(item, PommermanItem.SpeedUp)){
+            SetBit(ref hiddenBonus[x, z], PommermanItem.Passage);
+            SetBit(ref board[x , z], PommermanItem.SpeedUp);
+        } 
     }
     public static void RemoveBonus(Vector3 position)
     {
         //change bonus to passage 
         // because of bombing .
-        board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
-        hiddenBonus[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
+        SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Passage);
+        SetBit(ref hiddenBonus[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Passage);
     }
     public static void EatBonus(Vector3 position, Vector3 playerLocation)
     {
+        //FIXME: why? should remove bonus!
         //change bonus to player 
         // because of player collising.
-        PommermanItem item = board[Mathf.RoundToInt(playerLocation.x), Mathf.RoundToInt(playerLocation.z)];
+        ulong item = board[Mathf.RoundToInt(playerLocation.x), Mathf.RoundToInt(playerLocation.z)];
         bool crazy = false;
-        if(item >= PommermanItem.Agent0 && item <= PommermanItem.Agent3)
+        if(IsBitSet(item, PommermanItem.Agent0) 
+                || IsBitSet(item, PommermanItem.Agent1)
+                || IsBitSet(item, PommermanItem.Agent2)
+                || IsBitSet(item, PommermanItem.Agent3)
+        )
         {
-            board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = item;
+            if(IsBitSet(item, PommermanItem.Agent0)) {
+                SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent0);
+            }
+            if(IsBitSet(item, PommermanItem.Agent1)) {
+                SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent1);
+            }
+            if(IsBitSet(item, PommermanItem.Agent2)) {
+                SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent2);
+            }
+            if(IsBitSet(item, PommermanItem.Agent3)) {
+                SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent3);
+            }
             //FIXME: player prev positon should be set to passage.
-            board[Mathf.RoundToInt(playerLocation.x), Mathf.RoundToInt(playerLocation.z)] = PommermanItem.Passage;
-            hiddenBonus[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = PommermanItem.Passage;
+            SetBit(ref board[Mathf.RoundToInt(playerLocation.x), Mathf.RoundToInt(playerLocation.z)],  PommermanItem.Passage);
+            SetBit(ref hiddenBonus[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Passage);
         }else{
             //I am crazy
             crazy = true;
         }
     }
     //change agent in the board from prevlocation to curr location.
-    public static void UpdateAgent(Vector3 prevLocation, Vector3 currLocation)
+    public static void UpdateAgent(Vector3 prevLocation, Vector3 position)
     {
-        PommermanItem item = board[Mathf.RoundToInt(prevLocation.x) , Mathf.RoundToInt(prevLocation.z)];
-        board[Mathf.RoundToInt(currLocation.x) , Mathf.RoundToInt(currLocation.z)] = item;
+        ulong item = board[Mathf.RoundToInt(prevLocation.x) , Mathf.RoundToInt(prevLocation.z)];
+        if(IsBitSet(item, PommermanItem.Agent0)) {
+            SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent0);
+        }
+        if(IsBitSet(item, PommermanItem.Agent1)) {
+            SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent1);
+        }
+        if(IsBitSet(item, PommermanItem.Agent2)) {
+            SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent2);
+        }
+        if(IsBitSet(item, PommermanItem.Agent3)) {
+            SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], PommermanItem.Agent3);
+        }
     }
     public static void SetBoard(Vector3 position, PommermanItem item)
     {
         //use round function, not use (int) conversion.
-        board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)] = item;
+        SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], item);
+    }
+    // 清空指定位（将指定位置为0）
+    public static void ClearBit(ref ulong value, PommermanItem bitPos)
+    {
+        int bitPosition = (int)bitPos;
+        if (bitPosition < 0 || bitPosition > 63){
+            return ;
+        }
+            //throw new ArgumentException("位位置必须在0到63之间", nameof(bitPosition));
+
+            
+        value &= ~(1UL << bitPosition);
+    }
+
+    // 判断指定位是否为1
+    public static bool IsBitSet(ulong value, PommermanItem bitPos)
+    {
+        int bitPosition = (int)bitPos;
+        if (bitPosition < 0 || bitPosition > 63)
+        {
+            return false;
+        }
+        // throw new ArgumentException("位位置必须在0到63之间", nameof(bitPosition));
+            
+        return (value & (1UL << bitPosition)) != 0;
+    }
+    // 设置指定位为1
+    public static void SetBit(ref ulong value, PommermanItem bitPos)
+    {
+        int bitPosition = (int)bitPos;
+        if (bitPosition < 0 || bitPosition > 63)
+        {
+            return;
+        }
+        value |= 1UL << bitPosition; // 使用复合赋值运算符直接修改引用值
+    }
+    // 冲突的几个直接互相干掉
+    public static void SetCollisionBit(ref ulong value, PommermanItem bitPos)
+    {
+        //rigid passage wood will collised.
+        if(bitPos == PommermanItem.Rigid){
+            SetBit(ref value, bitPos);
+            ClearBit(ref value, PommermanItem.Passage);
+            ClearBit(ref value, PommermanItem.Wood);
+        }
+        if(bitPos == PommermanItem.Passage){
+            SetBit(ref value, bitPos);
+            ClearBit(ref value, PommermanItem.Rigid);
+            ClearBit(ref value, PommermanItem.Wood);
+        }
+        if(bitPos == PommermanItem.Wood){
+            SetBit(ref value, bitPos);
+            ClearBit(ref value, PommermanItem.Passage);
+            ClearBit(ref value, PommermanItem.Rigid);
+        }
+        //bonus type will collised.
+        if(bitPos == PommermanItem.ExtraBomb){
+            SetBit(ref value, bitPos);
+            ClearBit(ref value, PommermanItem.IncrRange);
+            ClearBit(ref value, PommermanItem.Kick);
+            ClearBit(ref value, PommermanItem.SpeedUp);
+        }        
+        if(bitPos == PommermanItem.IncrRange){
+            SetBit(ref value, bitPos);
+            ClearBit(ref value, PommermanItem.ExtraBomb);
+            ClearBit(ref value, PommermanItem.Kick);
+            ClearBit(ref value, PommermanItem.SpeedUp);
+        }     
+        if(bitPos == PommermanItem.Kick){
+            SetBit(ref value, bitPos);
+            ClearBit(ref value, PommermanItem.IncrRange);
+            ClearBit(ref value, PommermanItem.ExtraBomb);
+            ClearBit(ref value, PommermanItem.SpeedUp);
+        }     
+        if(bitPos == PommermanItem.SpeedUp){
+            SetBit(ref value, bitPos);
+            ClearBit(ref value, PommermanItem.IncrRange);
+            ClearBit(ref value, PommermanItem.ExtraBomb);
+            ClearBit(ref value, PommermanItem.Kick);
+        }     
     }
 }
