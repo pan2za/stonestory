@@ -19,6 +19,9 @@ public class PlayerUnit : MonoBehaviour
     public bool respawning = false;
     public Gameplay gameplay;
 
+    // 从起点到终点的路径，形成一串坐标。
+    public List<(int x, int y)> pathList = new List<(int x, int y)>();
+
     public void Start()
     {
         gameplay = FindObjectOfType<Gameplay>();

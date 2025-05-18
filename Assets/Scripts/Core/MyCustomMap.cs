@@ -19,6 +19,10 @@ public class MyCustomMap
     static ulong[,] hiddenBonus;
 
     static int playerId ;
+    
+    public static int GetSize(){
+        return size;
+    }
 
     public static void CreateMap(int mapSize)
     {
@@ -292,15 +296,67 @@ public class MyCustomMap
         return map[index];
     }
 
-    public static bool CanWalk(Vector3 currPos, Vector3 nextPos)
+
+    public static bool CanWalk(Vector3 nextPos)
     {
         if(Mathf.RoundToInt(nextPos.x) < 0 || Mathf.RoundToInt(nextPos.z) < 0 || Mathf.RoundToInt(nextPos.x) > size - 1 || Mathf.RoundToInt(nextPos.z) > size - 1){
             return false;
         }
 
-        ulong currItem = board[Mathf.RoundToInt(currPos.x), Mathf.RoundToInt(currPos.z)];
+        // 不是空地是不行的。
         ulong nextItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
-        return IsBitSet(nextItem, PommermanItem.Passage);
+        if(!IsBitSet(nextItem, PommermanItem.Passage)){
+            return false;
+        }
+        return true;
+    }
+
+    public static bool CanWalkAwayFromBomb(Vector3 nextPos)
+    {
+        if(!CanWalk(nextPos)){
+            return false;
+        }
+        if(Mathf.RoundToInt(nextPos.x) < 0 || Mathf.RoundToInt(nextPos.z) < 0 || Mathf.RoundToInt(nextPos.x) > size - 1 || Mathf.RoundToInt(nextPos.z) > size - 1){
+            return false;
+        }
+
+        // 不是空地是不行的。
+        ulong nextItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
+        if(!IsBitSet(nextItem, PommermanItem.Passage)){
+            return false;
+        }
+        //在炸弹射程内。同x或者同z，则会被炸弹炸死，也是不行的。
+        //有没有要爆炸的炸弹？有，则不行。
+        //                     |
+        //                     |
+        //                     |
+        //           ----------X----------->x     <------AgentN or Enemy
+        //                     |
+        //                     |
+        //                     |
+        //                     X  <-------BooM!
+        int range = 5; //FIXME: 炸弹最大射程，需要根据炸弹属于谁来判定其威力。此处暂时用了一个固定值
+        // x direction
+        for(int i = Mathf.RoundToInt(nextPos.z) - range; i < Mathf.RoundToInt(nextPos.z) + range; i++){
+            if(i > 0 && i < size){
+                ulong item = board[Mathf.RoundToInt(nextPos.x), i];
+                if(IsBitSet(item, PommermanItem.Bomb)){
+                    return false;
+                }
+            }
+        }
+        // z direction
+        for(int i = Mathf.RoundToInt(nextPos.x) - range; i < Mathf.RoundToInt(nextPos.x) + range; i++){
+            if(i > 0 && i < size){
+                ulong item = board[i, Mathf.RoundToInt(nextPos.z)];
+                if(IsBitSet(item, PommermanItem.Bomb)){
+                    return false;
+                }
+            }
+        }
+
+        return true;
+
     }
 
     static Vector2[] FindLocation(Vector2 pos)
@@ -502,6 +558,8 @@ public class MyCustomMap
     // 冲突的几个直接互相干掉
     public static void SetCollisionBit(ref ulong value, PommermanItem bitPos)
     {
+        //set anyway!
+        SetBit(ref value, bitPos);
         //rigid passage wood will collised.
         if(bitPos == PommermanItem.Rigid){
             SetBit(ref value, bitPos);
@@ -542,6 +600,14 @@ public class MyCustomMap
             ClearBit(ref value, PommermanItem.IncrRange);
             ClearBit(ref value, PommermanItem.ExtraBomb);
             ClearBit(ref value, PommermanItem.Kick);
-        }     
+        }
+
+    }
+    public static void SetCollisionBit(int x, int z, PommermanItem item){
+        SetCollisionBit(ref board[x, z], item);
+    }
+    public static bool IsBitSet(int x, int z, PommermanItem bitPos){
+        ulong value = board[x, z];
+        return IsBitSet(value, bitPos);
     }
 }
