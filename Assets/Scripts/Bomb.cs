@@ -22,6 +22,26 @@ public class Bomb : MonoBehaviour
 
     public Vector2 position; // 显式定义position字段
 
+    private float bombSpawnTime; // 记录炸弹释放的时间点
+
+    public float GetBombRange()
+    {
+        return (float)explode_size;
+    }
+
+    public float GetBombTimeout()
+    {
+        //获取当前时间和释放炸弹的时间差。
+        // 获取当前时间和释放炸弹的时间差
+        float elapsedTime = Time.time - bombSpawnTime;
+        
+        // 计算剩余时间（总时间3秒减去已过去的时间）
+        float remainingTime = 3f - elapsedTime;
+        
+        // 确保剩余时间不会小于0
+        return Mathf.Max(0f, remainingTime);
+    }
+
     public void Awake()
     {
         audioSource = GetComponent<AudioSource>();
@@ -31,6 +51,8 @@ public class Bomb : MonoBehaviour
 
     public void Start()
     {
+            // 记录炸弹释放时间
+        bombSpawnTime = Time.time;
         // 获取PlayerController实例
         playerController = FindObjectOfType<PlayerController>();
         Invoke("Explode", 3f);

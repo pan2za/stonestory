@@ -190,65 +190,7 @@ public class EnemyController : MonoBehaviour
         return p;
     }
 
-    private List<Vector3> FollowLocation(Vector3 startpos, Vector3 goal)
-    {
-        bool done = false;
-        List<Vector3> result = new List<Vector3>();
-        Vector3 currentpos = startpos;
 
-        var temp = FindObjectOfType<LoadMap>();
-        Vector3 old_pos = startpos;
-
-        while (!done)
-        {
-            if (currentpos == goal)
-            {
-                done = true;
-                continue;
-            }
-            old_pos = currentpos;
-            foreach (Distance d in FindNearCollisions(currentpos))
-            {
-                Vector3 temp_pos = Round(currentpos + d.dir);
-                if (MyCustomMap.CanWalkAwayFromBomb(temp_pos))
-                {
-                    if (Math.Abs(goal.x - temp_pos.x) < Math.Abs(goal.x - currentpos.x) ||
-                    Math.Abs(goal.z - temp_pos.z) < Math.Abs(goal.z - currentpos.z))
-                    {
-
-                        result.Add(currentpos);
-                        currentpos = temp_pos;
-                        break;
-                    }
-                }
-            }
-
-            if (currentpos == old_pos)
-                done = true;
-        }
-
-        return result;
-    }
-
-    private Vector3 FindRandomWalk()
-    {
-        var m = FindObjectOfType<LoadMap>();
-        Vector3 res = Vector3.zero;
-        bool found = false;
-
-        while (!found)
-        {
-            Vector3 test = new Vector3(UnityEngine.Random.Range(1, m.size - 1), 0, UnityEngine.Random.Range(1, m.size - 1));
-
-            if (MyCustomMap.CanWalkAwayFromBomb(test))
-            {
-                found = true;
-                res = test;
-            }
-        }
-
-        return res;
-    }
 
     private List<Vector3> GetSafePosition(Vector3 pos)
     {
@@ -345,21 +287,6 @@ public class EnemyController : MonoBehaviour
         //    a mesh = 60 frames
         // while a MovePlayer only move 1 frame
 
-        if(hasDestinationPos[player.PlayerId - 1]){
-            if(Vector3.Distance(destinationPos[player.PlayerId - 1] , transform.position) > 0.1f){
-                Vector3 direction = (destinationPos[player.PlayerId - 1] - transform.position).normalized;
-                MovePlayer(direction, destinationPos[player.PlayerId - 1]);
-                return;
-            }else{
-                //so near, update..
-            }
-        }else{
-            // the first time.
-        }
-        if(transform.position.x < 5 && transform.position.z < 5){
-            Debug.Log(string.Format(" towards>> X:{0:F2},  Z:{1:F2}", 
-                destinationPos[player.PlayerId - 1].x, destinationPos[player.PlayerId - 1].z));
-        }
         //else:
 
         //1 I will go 4 directions
@@ -378,92 +305,6 @@ public class EnemyController : MonoBehaviour
         //NextDodgeLocation(detections);
         //MovePlayer(next_dir, next_pos);
         // 随机选一个方向
-        Vector3[] locations= new Vector3[4]; 
-        float maxDelta3 = 1;// (player.moveSpeed / 2) * Time.deltaTime ;
-        //right
-        locations[0].x = transform.position.x + maxDelta3;
-        locations[0].y = transform.position.y ;
-        locations[0].z = transform.position.z ;
-        //left
-        locations[1].x = transform.position.x - maxDelta3;
-        locations[1].y = transform.position.y ;
-        locations[1].z = transform.position.z ;
-        //up
-        locations[2].x = transform.position.x ;
-        locations[2].y = transform.position.y ;
-        locations[2].z = transform.position.z + maxDelta3;
-        //down
-        locations[3].x = transform.position.x ;
-        locations[3].y = transform.position.y ;
-        locations[3].z = transform.position.z - maxDelta3;
-       
-        // 上下左右
-        // 如果有一个可以走
-        // if MUST move backward, I will move backward.
-        // if I can move to another way, I will not move backward.
-        int count = 0;
-        for(int i = 0; i < 4; i++)
-        {
-            Vector3 nextLocation = locations[i];
-            Vector3 direction = (nextLocation - transform.position).normalized;
-
-            if(MyCustomMap.CanWalkAwayFromBomb(nextLocation))
-            {
-                count++;
-            }
-        }
-
-        if(count == 0)
-        {
-            // Can't Move....
-            // YOU may Stuck here.
-            // 向东南西北都在炸弹范围内。那就说明很危险，需要原地不动。或者赶紧选择一条路子逃离。
-            // 挑选一条路走。
-            if(MyCustomMap.CanWalkAwayFromBomb(transform.position)){
-                //可以原地不动吗？
-                //stay here
-            }else{
-                for(int i = 0; i < 4; i++)
-                {
-                    Vector3 nextLocation = locations[i];
-                    Vector3 direction = (nextLocation - transform.position).normalized;
-
-                    if(MyCustomMap.CanWalk(nextLocation))
-                    {
-                        prevMeshPos[player.PlayerId - 1] = destinationPos[player.PlayerId - 1];
-                        //destinationPos[player.PlayerId - 1] = locations[i];
-                        //hasDestinationPos[player.PlayerId - 1] = true;
-                        MovePlayer(direction, nextLocation);
-                        break;
-                    }
-                }
-            }
-        }else if(count == 1){
-            // move this way
-            for(int i = 0; i < 4; i++)
-            {
-                Vector3 nextLocation = locations[i];
-                Vector3 direction = (nextLocation - transform.position).normalized;
-
-                if(MyCustomMap.CanWalkAwayFromBomb(nextLocation))
-                {
-                    prevMeshPos[player.PlayerId - 1] = destinationPos[player.PlayerId - 1];
-                    destinationPos[player.PlayerId - 1] = locations[i];
-                    hasDestinationPos[player.PlayerId - 1] = true;
-                    MovePlayer(direction, nextLocation);
-                    break;
-                }
-            }            
-        }else{
-            int randNum = UnityEngine.Random.Range(0, count);
-            // move forward, will not move backward..
-            for(int i = 0; i < 4; i++)
-            {
-                Vector3 nextLocation = locations[i];
-                Vector3 direction = (nextLocation - transform.position).normalized;
-
-                if(MyCustomMap.CanWalkAwayFromBomb( nextLocation))
-                {
                     //the move back logic :
                     // from source lattice to destination lattice
                     // NOT from source frame to destination frame.
@@ -484,17 +325,6 @@ public class EnemyController : MonoBehaviour
                     //                    |
                     //
                     //
-                    if(Vector3.Distance(prevMeshPos[player.PlayerId - 1], locations[i]) > 0.1f)
-                    {
-                        prevMeshPos[player.PlayerId - 1] = destinationPos[player.PlayerId - 1];
-                        destinationPos[player.PlayerId - 1] = locations[i];
-                        hasDestinationPos[player.PlayerId - 1] = true;
-                        MovePlayer(direction, nextLocation);
-                        break;
-                    }
-                }
-            }
-        }
         // 走过去
         // 如果没有就呆住
         
@@ -817,37 +647,36 @@ public class EnemyController : MonoBehaviour
         // 每点满足条件：是空点，不在炸弹爆炸时刻的射程内。
         // GO!
         int size = MyCustomMap.GetSize();
+        var start = (x, z);
         for(int i = 0; i < size; i++){
             for(int j = 0; j < size; j++){
                 if(MyCustomMap.IsBitSet(i, j, PommermanItem.Passage)){
                     // 找到到空点的所有路径
                     ChessboardPathFinder finder = new ChessboardPathFinder(size, size);
-                    var start = (x, z);
+
                     var end = (i, j);
                     
-                    var paths = finder.FindAllPaths(start, end);
+                    var paths = finder.FindAllPathsWithoutBombs(start, end);
                     foreach (var path in paths)
                     {
                         bool bad = false;
                         //Console.WriteLine("路径:");
-                        foreach (var point in path)
+                        for(int k = 0; k < path.Count; k++)
                         {
+                            var point = path[k];
                             //Console.Write($"({point.x}, {point.y}) -> ");
                             //堵上了，这条路不通
-                            if(!MyCustomMap.IsBitSet(i, j, PommermanItem.Passage)){
+                            if(!CanWalkAwayFromBomb(point.x, point.y, k)){
                                 bad = true;
                                 break;
                             }
                         }
                         if(!bad){
                             //通路
-                            //是否在炸弹爆炸时刻的射程内？FIXME
-                            bool willBoom = false;
-                            if(!willBoom){
-                                // go this way.
-                                player.pathList = path;
-                                break;
-                            }
+                            //是否在炸弹爆炸时刻的射程内
+                            // go this way.
+                            player.pathList = path;
+                            return;
                         }
                         //Console.WriteLine();
                     }                   
@@ -855,5 +684,107 @@ public class EnemyController : MonoBehaviour
             }
         }
         
+    }
+    private float GetBombRange(int x, int z)
+    {
+        int len = bombs.Count;
+
+        if (len > 0)
+        {
+            for (int i = 0; i < len; i++)
+            {
+                if ((bombs[i] != null) && (Mathf.RoundToInt(bombs[i].transform.position.x) == x && Mathf.RoundToInt(bombs[i].transform.position.z) == z))
+                    return bombs[i].GetBombRange();
+            }
+        }
+
+        return 0;
+    }
+    private float GetBombTimeout(int x, int z)
+    {
+        int len = bombs.Count;
+
+        if (len > 0)
+        {
+            for (int i = 0; i < len; i++)
+            {
+                if ((bombs[i] != null) && (Mathf.RoundToInt(bombs[i].transform.position.x) == x && Mathf.RoundToInt(bombs[i].transform.position.z) == z))
+                    return bombs[i].GetBombTimeout();
+            }
+        }
+
+        return 0;
+    }    
+
+    //选择的路径是否碰巧在炸弹爆炸射程里面？
+    // x, z is location point of the Path
+    // positionAtPath is the point sequence of the Path.
+    public bool CanWalkAwayFromBomb(int x, int z, int positionAtPath)
+    {
+        // 已知该点 x，z
+        // player跑到该点的时间为t秒（t秒取决于路径）
+        float playReachTime = 0.5f*positionAtPath;//FIXME: 3秒后经过,取决于该路径的点的位置，例如第k个点。
+        // 附近有炸弹，炸弹爆炸会不会波及该点？
+        // 炸弹爆炸不会波及该点，那就可以走。
+        // 假设炸弹不会波及该点，怎么判断？
+        // 附近有炸弹，炸弹威力是多大？会不会波及？
+
+        // 1 列出所有判断的可能炸弹点。possibleBombPoints
+        // x direction
+        List<Vector2> possibleBombPoints = new List<Vector2>();
+        for(int i = 0; i < MyCustomMap.GetSize(); i++){
+                if(MyCustomMap.IsBitSet(x, i, PommermanItem.Bomb)){
+                    possibleBombPoints.Add(new Vector2(x, i));
+                }
+        }
+        // z direction
+        for(int i = 0; i < MyCustomMap.GetSize(); i++){
+                if(MyCustomMap.IsBitSet(i, z, PommermanItem.Bomb)){
+                    possibleBombPoints.Add(new Vector2(i, z));
+                }
+        }      
+
+        // 3 没有发现炸弹，true
+        if(possibleBombPoints==null || possibleBombPoints.Count == 0){
+            return true;
+        }
+        // 2 遍历possibleBombPoints
+        // 4 检查该炸弹位置 bx, bz
+        for(int i = 0; i < possibleBombPoints.Count; i++){
+            Vector2 pos = possibleBombPoints[i];
+            int bx = Mathf.RoundToInt(pos.x);
+            int bz = Mathf.RoundToInt(pos.y);
+            //len = 炸弹和空闲点的距离
+            float len = Mathf.Abs(bx - x) + Mathf.Abs(bz - z);
+            // 炸弹射程
+            float range = GetBombRange(bx, bz);
+            if(range >= len){
+                float timeout = GetBombTimeout(bx, bz);                
+                if(Mathf.Abs(playReachTime - timeout) < 0.3){
+                    return false;
+                }
+            }
+            //炸弹距离太大，炸不到
+
+            //炸弹炸得太早或太晚，也炸不到。
+        }
+        // 5 is this bomb have effect on the way(x, z)?
+        // 5.1 炸弹长度(bx-x) or (bz-z)小于max则可以安全通过。
+        // 5.2 获取bomb爆炸时间，例如2秒后
+        // 5.3 获取player经过的时间，例如3秒后。
+        // 5.4 如果abs(playpassbytime - explosiontime) < 0.3s,则认为正好撞上爆炸。
+        //在炸弹射程内。同x或者同z，则会被炸弹炸死，也是不行的。
+        //有没有要爆炸的炸弹？有，则不行。
+        //                     |
+        //                     |
+        //                     |
+        //           ----B-----X------B----->x     <------AgentN or Enemy
+        //                     |
+        //                     |
+        //                     |
+        //                     B  <-------BooM!
+
+        return true;
+
     }
 }

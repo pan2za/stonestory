@@ -19,7 +19,7 @@ public class MyCustomMap
     static ulong[,] hiddenBonus;
 
     static int playerId ;
-    
+
     public static int GetSize(){
         return size;
     }
@@ -297,66 +297,21 @@ public class MyCustomMap
     }
 
 
+    public static bool CanWalk(int x, int z){
+        if(x < 0 || z < 0 || x > size - 1 || z > size - 1){
+            return false;
+        }
+
+        // 不是空地是不行的。
+        ulong nextItem = board[x, z];
+        if(!IsBitSet(nextItem, PommermanItem.Passage)){
+            return false;
+        }
+        return true;        
+    }
     public static bool CanWalk(Vector3 nextPos)
     {
-        if(Mathf.RoundToInt(nextPos.x) < 0 || Mathf.RoundToInt(nextPos.z) < 0 || Mathf.RoundToInt(nextPos.x) > size - 1 || Mathf.RoundToInt(nextPos.z) > size - 1){
-            return false;
-        }
-
-        // 不是空地是不行的。
-        ulong nextItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
-        if(!IsBitSet(nextItem, PommermanItem.Passage)){
-            return false;
-        }
-        return true;
-    }
-
-    public static bool CanWalkAwayFromBomb(Vector3 nextPos)
-    {
-        if(!CanWalk(nextPos)){
-            return false;
-        }
-        if(Mathf.RoundToInt(nextPos.x) < 0 || Mathf.RoundToInt(nextPos.z) < 0 || Mathf.RoundToInt(nextPos.x) > size - 1 || Mathf.RoundToInt(nextPos.z) > size - 1){
-            return false;
-        }
-
-        // 不是空地是不行的。
-        ulong nextItem = board[Mathf.RoundToInt(nextPos.x), Mathf.RoundToInt(nextPos.z)];
-        if(!IsBitSet(nextItem, PommermanItem.Passage)){
-            return false;
-        }
-        //在炸弹射程内。同x或者同z，则会被炸弹炸死，也是不行的。
-        //有没有要爆炸的炸弹？有，则不行。
-        //                     |
-        //                     |
-        //                     |
-        //           ----------X----------->x     <------AgentN or Enemy
-        //                     |
-        //                     |
-        //                     |
-        //                     X  <-------BooM!
-        int range = 5; //FIXME: 炸弹最大射程，需要根据炸弹属于谁来判定其威力。此处暂时用了一个固定值
-        // x direction
-        for(int i = Mathf.RoundToInt(nextPos.z) - range; i < Mathf.RoundToInt(nextPos.z) + range; i++){
-            if(i > 0 && i < size){
-                ulong item = board[Mathf.RoundToInt(nextPos.x), i];
-                if(IsBitSet(item, PommermanItem.Bomb)){
-                    return false;
-                }
-            }
-        }
-        // z direction
-        for(int i = Mathf.RoundToInt(nextPos.x) - range; i < Mathf.RoundToInt(nextPos.x) + range; i++){
-            if(i > 0 && i < size){
-                ulong item = board[i, Mathf.RoundToInt(nextPos.z)];
-                if(IsBitSet(item, PommermanItem.Bomb)){
-                    return false;
-                }
-            }
-        }
-
-        return true;
-
+        return CanWalk(Mathf.RoundToInt(nextPos.x) , Mathf.RoundToInt(nextPos.z) );
     }
 
     static Vector2[] FindLocation(Vector2 pos)

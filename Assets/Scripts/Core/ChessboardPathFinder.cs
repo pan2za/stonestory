@@ -73,10 +73,39 @@ public  class ChessboardPathFinder
     private  bool IsValidMove(int x, int y)
     {
         if( x >= 0 && x < rows && y >= 0 && y < cols && !visited[x, y]){
-            if(MyCustomMap.IsBitSet(x, y, PommermanItem.Passage)){
+            if(MyCustomMap.CanWalk(x, y)){
+                //判断该点是在炸弹射程内吗？
+                //该点上下左右是否有炸弹，炸弹在n秒爆炸。用户在m到k秒到达该点。
                 return true;
             }
         }
         return false;
     }
+
+    // 主方法：获取所有从start到end的路径,找到没有炸弹的路径
+    public  List<List<(int x, int y)>> FindAllPathsWithoutBombs((int x, int y) start, (int x, int y) end)
+    {
+        List<List<(int x, int y)>> pathsWithoutBomb = new List<List<(int x, int y)>>();
+        var paths = FindAllPaths(start, end);
+        foreach (var path in paths)
+        {
+            bool bad = false;
+            for (int i = 0; i < path.Count; i++)
+            {
+                var point = path[i];
+                //FIXME: 暂时只判断前5个点是否有炸弹，有炸弹则不走。
+                if(i > 0 && i < 5){
+                    if(MyCustomMap.IsBitSet(point.x, point.y, PommermanItem.Bomb)){
+                        bad = true;
+                        break;
+                    }
+                }
+            }
+            if(!bad){
+                pathsWithoutBomb.Add(path);
+            }
+        }                
+        return pathsWithoutBomb;
+    }
+
 }
