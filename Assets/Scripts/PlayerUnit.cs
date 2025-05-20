@@ -17,10 +17,16 @@ public class PlayerUnit : MonoBehaviour
 
     public bool dead = false;
     public bool respawning = false;
+    public bool takecare = false; //小心炸弹.3f秒后才消失。
+    public bool isWaiting = false;
     public Gameplay gameplay;
 
     // 从起点到终点的路径，形成一串坐标。
     public List<(int x, int y)> pathList = new List<(int x, int y)>();
+
+    public bool isDead(){
+        return dead;
+    }
 
     public void Start()
     {

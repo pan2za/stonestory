@@ -64,61 +64,58 @@ public class EnemyController : MonoBehaviour
     {
         animator.SetBool("Walking", false);
 
-        int agentPos = 0;
-        if(transform.position.x < 3 && transform.position.z < 3)
-        {
-            agentPos = 1; // left down
-        }else if(transform.position.x < 3 && transform.position.z > 18)
-        {
-            agentPos = 2; // right down
-        }else if(transform.position. x > 18 && transform.position.z < 3)
-        {
-            agentPos = 3; // left up
-        }else if(transform.position.x > 18 && transform.position. z > 18)
-        {
-            agentPos = 4; // right up
+        if(player.isDead()){
+            return;
         }
-
-        if (!CanPlaceBomb())
+        if(player.takecare && !player.isWaiting){
+            StartCoroutine(WaitAndResetTakecare());
+        }
+        if (!CanPlaceBomb(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z)))
         {
             // move to any bomb-free path
             //no bomb can be placed.
-            detections = FindNearCollisions(transform.position);
-
-            if (HasTag(detections, "Bomb"))
-            {
-                NextDodgeLocation(detections);
-                MovePlayer(next_dir, next_pos);
-                return;
-            }
-            else if (HasTag(detections, "PowerUp"))
-            {
-                int count = detections.Count;
-
-                for (int k = 0; k < count; k++)
-                {
-                    if (string.Compare(detections[k].tag, "PowerUp") == 0)
-                    {
-                        path.Clear();
-                        path.Add(transform.position + detections[k].dir);
-                        MovePath();
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                MovePath();
-                if (bombs.Count > 0 && !HasBombsActive())
-                    bombs.Clear();
-            }
+            //FIXME: if eat bonus PowerUp, I should clear and update the Path.
+            MovePath();
+            if (bombs.Count > 0 && !HasBombsActive())
+                bombs.Clear();
             return;
         }else{
+            if(player.PlayerId == 4){
+                //FIXME: ONLY DEBUG right down player.
+                int x = Mathf.RoundToInt(transform.position.x);
+                int z = Mathf.RoundToInt(transform.position.z);
+                // 查看他的下一步动作。
+            }
             //2 drop a bomb
             //FIXME: should drop a bomb
             DropBomb();
-            //3 run away to dodge the bomb.
-            MovePath();
+            // 如果已经计算过路线，按照计算的路线前进
+            if(player.PlayerId == 4){
+                Debug.Log($"pathList count {player.pathList.Count}");
+            }
+            if (player.pathList != null && player.pathList.Count > 0){
+                //第一个点已经到达了
+                player.pathList.RemoveAt(0);
+            }
+            if (player.pathList != null && player.pathList.Count > 0)
+            {
+                // 获取下一个目标点
+                Vector3 nextLocation = new Vector3(player.pathList[0].x, transform.position.y, player.pathList[0].y);
+                Vector3 currLocation = new Vector3(transform.position.x, transform.position.y, transform.position.z);
+                
+                // 计算移动方向
+                Vector3 direction = (nextLocation - currLocation).normalized;
+                
+                // 移动玩家
+                MovePlayer(direction, nextLocation);
+                
+                // 检查是否到达目标点
+                if (Vector3.Distance(transform.position, nextLocation) < 0.1f)
+                {
+                    // 移除已到达的点
+                    player.pathList.RemoveAt(0);
+                }
+            }
             return; 
         }
     }
@@ -259,13 +256,13 @@ public class EnemyController : MonoBehaviour
             Vector3 currLocation = new Vector3(transform.position.x, transform.position.y, transform.position.z);
             
             // 计算移动方向
-            Vector2 direction = (nextLocation - currLocation).normalized;
+            Vector3 direction = (nextLocation - currLocation).normalized;
             
             // 移动玩家
             MovePlayer(direction, nextLocation);
             
             // 检查是否到达目标点
-            if (Vector2.Distance(transform.position, nextLocation) < 0.1f)
+            if (Vector3.Distance(transform.position, nextLocation) < 0.01f)
             {
                 // 移除已到达的点
                 player.pathList.RemoveAt(0);
@@ -392,29 +389,6 @@ public class EnemyController : MonoBehaviour
         return result;
     }
 
-    private bool CanPlaceBomb()
-    {
-        if(player.avalibleBomb == 0){
-            return false;
-        }
-        detections = FindNearCollisions(transform.position);
-
-        for (int k = 0; k < detections.Count; k++)
-        {
-            Distance d = detections[k];
-
-            if (d.tag == "Breakable" || (d.tag == "Player" && drop_bomb_on_player))
-            {
-                if (d.dist < player.explosion_power)
-                {
-                    ArrayList temp = FindEscapePath(transform.position, transform.position);
-                    if (temp.Count >= 2) return true;
-                }
-            }
-        }
-
-        return false;
-    }
 
     private int GetWays(List<Distance> detections)
     {
@@ -612,8 +586,8 @@ public class EnemyController : MonoBehaviour
     {
         if (player.avalibleBomb > 0 && bombPrefab)
         {
-            var obj = Instantiate(bombPrefab, new Vector3(Mathf.RoundToInt(transform.position.x),
-             bombPrefab.transform.position.y, Mathf.RoundToInt(transform.position.z)),
+            var obj = Instantiate(bombPrefab, new Vector3(transform.position.x,
+             bombPrefab.transform.position.y, transform.position.z),
              bombPrefab.transform.rotation);
 
             player.avalibleBomb--;
@@ -628,8 +602,13 @@ public class EnemyController : MonoBehaviour
                 int x = Mathf.RoundToInt(transform.position.x);
                 int z = Mathf.RoundToInt(transform.position.z);
                 // 查看他的下一步动作。
+                Debug.Log("player 4 drop bomb");
             }
             MyCustomMap.SetCollisionBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
+            //3 run away to dodge the bomb.
+            player.pathList.Clear();
+            // 路线用完了，重新计算路线
+            DestFinder(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z));
         }
     }
 
@@ -655,7 +634,9 @@ public class EnemyController : MonoBehaviour
                     ChessboardPathFinder finder = new ChessboardPathFinder(size, size);
 
                     var end = (i, j);
-                    
+                    if(MyCustomMap.IsNextToBomb(i, j)){
+                        continue;
+                    }                    
                     var paths = finder.FindAllPathsWithoutBombs(start, end);
                     foreach (var path in paths)
                     {
@@ -721,6 +702,10 @@ public class EnemyController : MonoBehaviour
     // positionAtPath is the point sequence of the Path.
     public bool CanWalkAwayFromBomb(int x, int z, int positionAtPath)
     {
+        //可能是刚刚放了炸弹
+        if(positionAtPath == 0){
+            return true;
+        }
         // 已知该点 x，z
         // player跑到该点的时间为t秒（t秒取决于路径）
         float playReachTime = 0.5f*positionAtPath;//FIXME: 3秒后经过,取决于该路径的点的位置，例如第k个点。
@@ -786,5 +771,113 @@ public class EnemyController : MonoBehaviour
 
         return true;
 
+    }
+   public bool CanPlaceBomb(int x, int z) {
+        // 遍历棋盘 size=11X11
+            // 找到所有不在炸弹射程的Passage点 SavePoint
+                // 找寻到SavePoint的路径
+                    // 遍历路径
+                    // 路径通则设置为终点站
+                        // 多条路径，是否会跑到炸弹射程里面，如果会，则放弃这条路径。如果不会，就是安全路径。 Security Path
+                        // 向终点站进发。
+        // 遍历棋盘
+        // 找到空点
+        // 找到到空点的路径
+        // 每点满足条件：是空点，不在炸弹爆炸时刻的射程内。
+        // GO!
+        int size = MyCustomMap.GetSize();
+        var start = (x, z);
+        for(int i = 0; i < size; i++){
+            for(int j = 0; j < size; j++){
+                if(MyCustomMap.IsBitSet(i, j, PommermanItem.Passage)){
+                    // 找到到空点的所有路径
+                    ChessboardPathFinder finder = new ChessboardPathFinder(size, size);
+
+                    var end = (i, j);
+                    
+                    //目的地上下左右任意3个不是Passage，最后一个方向是FutureBomb。这个也不行
+                    if(IsDeadEnd(i, j, x, z)){
+                        continue;
+                    }                    
+                    var paths = finder.FindAllPathsWithoutBombs(start, end);
+                    foreach (var path in paths)
+                    {
+                        bool bad = false;
+
+                        //Console.WriteLine("路径:");
+                        for(int k = 0; k < path.Count; k++)
+                        {
+                            var point = path[k];
+                            //Console.Write($"({point.x}, {point.y}) -> ");
+                            //堵上了，这条路不通
+                            if(!CanWalkAwayFromBomb(point.x, point.y, k)){
+                                bad = true;
+                                break;
+                            }
+                            //FIXME:考虑炸弹放下后的行为，炸弹会炸死自己吗？else if(!CanWalkAwayFromFutureBomb(point.x, point.y, k, x, z, 3f)){
+                            //    bad = true;
+                            //    break;
+                            //}
+                        }
+                        if(!bad){
+                            //通路
+                            //是否在炸弹爆炸时刻的射程内
+                            // go this way.                            
+                            return true;
+                        }
+                        //Console.WriteLine();
+                    }                   
+                }
+            }
+        }
+        return false;
+    }
+    bool IsDeadEnd(int dest_x, int dest_z, int futurebomb_x, int futurebomb_z)
+    {
+        //原地不动作为目的地。放炸弹，会炸死自己。
+        if(dest_x == futurebomb_x && dest_z == futurebomb_z){
+            return true;
+        }
+        //确定是挨着的关系。
+        if(Math.Abs(dest_x - futurebomb_x) + Math.Abs(dest_z - futurebomb_z) == 1 ){
+            //目的周边至少2块空地
+            bool isLeftPassable = MyCustomMap.IsBitSet(dest_x-1, dest_z, PommermanItem.Passage);
+            bool isRightPassable = MyCustomMap.IsBitSet(dest_x+1, dest_z, PommermanItem.Passage);
+            bool isUpPassable = MyCustomMap.IsBitSet(dest_x, dest_z+1, PommermanItem.Passage);
+            bool isDownPassable = MyCustomMap.IsBitSet(dest_x, dest_z-1, PommermanItem.Passage);
+            int i = 0;
+            if(isLeftPassable ){
+                i++;
+            }
+            if(isRightPassable){
+                i++;
+            }
+            if(isUpPassable){
+                i++;
+            }
+            if(isDownPassable){
+                i++;
+            }
+            if(i>=2){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private IEnumerator WaitAndResetTakecare()
+    {
+        player.isWaiting = true; // 标记为正在等待
+        
+        yield return new WaitForSeconds(3f); // 等待0.5秒
+        
+        if(player != null) // 确保player引用仍然有效
+        {
+            Debug.Log($"user {player.PlayerId} add bomb");
+            player.avalibleBomb++;
+            player.takecare = false;
+        }
+        
+        player.isWaiting = false; // 标记等待结束
     }
 }

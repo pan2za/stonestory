@@ -360,6 +360,8 @@ public class MyCustomMap
         {
             int players = MyPlayerPrefs.GetPlayers();
             playerId = Random.Range(0, players) + 1;
+            //FIXME: change playerId to random
+            playerId = 1;
         }
         return playerId;
     }
@@ -476,6 +478,11 @@ public class MyCustomMap
         SetBit(ref board[Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.z)], item);
     }
     // 清空指定位（将指定位置为0）
+    public static void ClearBit(int x, int z, PommermanItem bitPos)
+    {
+        ClearBit(ref board[x, z], bitPos);
+    }
+    // 清空指定位（将指定位置为0）
     public static void ClearBit(ref ulong value, PommermanItem bitPos)
     {
         int bitPosition = (int)bitPos;
@@ -487,7 +494,6 @@ public class MyCustomMap
             
         value &= ~(1UL << bitPosition);
     }
-
     // 判断指定位是否为1
     public static bool IsBitSet(ulong value, PommermanItem bitPos)
     {
@@ -564,5 +570,23 @@ public class MyCustomMap
     public static bool IsBitSet(int x, int z, PommermanItem bitPos){
         ulong value = board[x, z];
         return IsBitSet(value, bitPos);
+    }
+    public static bool IsNextToBomb(int x, int z){
+        //上下左右有炸弹，那不可以。
+                // 1 列出所有判断的可能炸弹点。possibleBombPoints
+        // x direction
+        List<Vector2> possibleBombPoints = new List<Vector2>();
+        for(int i = z-2; i < z+2 && i > 0 && i < size; i++){
+                if(IsBitSet(x, i, PommermanItem.Bomb)){
+                    return true;
+                }
+        }
+        // z direction
+        for(int i = x-2; i < x+2 && i > 0 && i < size; i++){
+                if(IsBitSet(i, z, PommermanItem.Bomb)){
+                   return true;
+                }
+        }
+        return false; 
     }
 }

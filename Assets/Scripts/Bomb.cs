@@ -70,16 +70,31 @@ public class Bomb : MonoBehaviour
         StartCoroutine(CreateExplosions(Vector3.back));
         StartCoroutine(CreateExplosions(Vector3.left));
 
+
         exploded = true;
         GetComponent<MeshRenderer>().enabled = false;
 
         transform.Find("Collider").gameObject.SetActive(false);
         Destroy(gameObject, .3f);
-        player.avalibleBomb++;
+
+        // 在增加可用炸弹前检查player引用是否有效
+        if (player != null)
+        {
+            //player.avalibleBomb++;
+            player.takecare = true;
+        }
+        else
+        {
+            Debug.LogWarning("炸弹爆炸后player引用为空，无法增加可用炸弹数量");
+        }
         // 通知playerController炸弹已爆炸并移除其位置
         playerController.OnBombExploded(transform.position);
         //reveal bonus in the board after bombing
+        MyCustomMap.ClearBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
+
     }
+
+
 
     public void OnTriggerEnter(Collider other)
     {
