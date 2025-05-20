@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
@@ -33,7 +34,8 @@ public class EnemyController : MonoBehaviour
     //destination position of each agent.
     private Vector3[] destinationPos = new Vector3[4];
     private bool[] hasDestinationPos = new bool[4];
-
+ private string logFilePath;
+     private bool isLogInitialized = false;
     private struct Distance
     {
         public Vector3 dir;
@@ -58,8 +60,24 @@ public class EnemyController : MonoBehaviour
         for(int i = 0; i < 4; i++){
             hasDestinationPos[i] = false;
         }
+        LogInitialize();
     }
+    // 或者提供公共方法手动初始化
+    public void LogInitialize()
+    {
+        if (isLogInitialized) return;
+        
+        // 设置日志文件路径，这里保存在应用程序数据目录下的Logs文件夹中
+        string logFolderPath = Path.Combine(Application.dataPath, "Logs");
+        if (!Directory.Exists(logFolderPath))
+        {
+            Directory.CreateDirectory(logFolderPath);
+        }
 
+        logFilePath = Path.Combine(logFolderPath, $"Log_{System.DateTime.Now:yyyy-MM-dd}.txt");
+        Application.logMessageReceived += HandleLog;
+        isLogInitialized = true;
+    }
     public void Update()
     {
         animator.SetBool("Walking", false);
@@ -80,42 +98,11 @@ public class EnemyController : MonoBehaviour
                 bombs.Clear();
             return;
         }else{
-            if(player.PlayerId == 4){
-                //FIXME: ONLY DEBUG right down player.
-                int x = Mathf.RoundToInt(transform.position.x);
-                int z = Mathf.RoundToInt(transform.position.z);
-                // 查看他的下一步动作。
-            }
             //2 drop a bomb
-            //FIXME: should drop a bomb
             DropBomb();
             // 如果已经计算过路线，按照计算的路线前进
-            if(player.PlayerId == 4){
-                Debug.Log($"pathList count {player.pathList.Count}");
-            }
-            if (player.pathList != null && player.pathList.Count > 0){
-                //第一个点已经到达了
-                player.pathList.RemoveAt(0);
-            }
-            if (player.pathList != null && player.pathList.Count > 0)
-            {
-                // 获取下一个目标点
-                Vector3 nextLocation = new Vector3(player.pathList[0].x, transform.position.y, player.pathList[0].y);
-                Vector3 currLocation = new Vector3(transform.position.x, transform.position.y, transform.position.z);
-                
-                // 计算移动方向
-                Vector3 direction = (nextLocation - currLocation).normalized;
-                
-                // 移动玩家
-                MovePlayer(direction, nextLocation);
-                
-                // 检查是否到达目标点
-                if (Vector3.Distance(transform.position, nextLocation) < 0.1f)
-                {
-                    // 移除已到达的点
-                    player.pathList.RemoveAt(0);
-                }
-            }
+            player.pathList.Clear();
+            MovePath();
             return; 
         }
     }
@@ -260,7 +247,9 @@ public class EnemyController : MonoBehaviour
             
             // 移动玩家
             MovePlayer(direction, nextLocation);
-            
+            if(player.PlayerId == 4){
+                Debug.Log($"player 4 : {transform.position} moved to {nextLocation}.");
+            }
             // 检查是否到达目标点
             if (Vector3.Distance(transform.position, nextLocation) < 0.01f)
             {
@@ -272,6 +261,12 @@ public class EnemyController : MonoBehaviour
         {
             // 路线用完了，重新计算路线
             DestFinder(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z));
+            if(player.PlayerId == 4){
+                Debug.Log("player 4 : Calculated Path.");
+                foreach(var point in player.pathList){
+                    Debug.Log($"-> ({point.x}, {point.y})");
+                }
+            }
         }
         return;
         //if the destination has not been reached.
@@ -602,7 +597,7 @@ public class EnemyController : MonoBehaviour
                 int x = Mathf.RoundToInt(transform.position.x);
                 int z = Mathf.RoundToInt(transform.position.z);
                 // 查看他的下一步动作。
-                Debug.Log("player 4 drop bomb");
+                Debug.Log($"player 4 drop bomb at {transform.position}.");
             }
             MyCustomMap.SetCollisionBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
             //3 run away to dodge the bomb.
@@ -879,5 +874,23 @@ public class EnemyController : MonoBehaviour
         }
         
         player.isWaiting = false; // 标记等待结束
+    }
+    private void HandleLog(string logString, string stackTrace, LogType type)
+    {
+        string logEntry = $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{type}] {logString}";
+        if (type == LogType.Exception || type == LogType.Error)
+        {
+            logEntry += $"\nStackTrace: {stackTrace}";
+        }
+        logEntry += "\n";
+
+        try
+        {
+            File.AppendAllText(logFilePath, logEntry);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Failed to write log: {e.Message}");
+        }
     }
 }
