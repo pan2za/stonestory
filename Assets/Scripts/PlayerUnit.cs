@@ -18,7 +18,8 @@ public class PlayerUnit : MonoBehaviour
     public bool dead = false;
     public bool respawning = false;
 
-    public bool isWaiting = false;
+    public int isFrozing = 0; // 0: not freezing, 1: freezing, 2: frozen.;
+
     public Gameplay gameplay;
 
     // 从起点到终点的路径，形成一串坐标。

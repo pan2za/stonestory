@@ -106,20 +106,7 @@ public class Bomb : MonoBehaviour
         }
     }
 
-    private IEnumerator WaitAndResetTakecare()
-    {
-        player.isWaiting = true; // 标记为正在等待
 
-        yield return new WaitForSeconds(3f); // 等待0.5秒
-
-        if (player != null) // 确保player引用仍然有效
-        {
-            Debug.Log($"user {player.PlayerId} add bomb");
-            player.avalibleBomb++;
-        }
-
-        player.isWaiting = false; // 标记等待结束
-    }
 
     public void OnTriggerEnter(Collider other)
     {
@@ -169,11 +156,13 @@ public class Bomb : MonoBehaviour
             yield return new WaitForSeconds(.05f);
         }
     }
-    private void OnDestroy() {
-        player.avalibleBomb++;
+    private void OnDestroy()
+    {
+        player.isFrozing = 1;
         // 通知playerController炸弹已爆炸并移除其位置
         playerController.OnBombExploded(transform.position);
         //reveal bonus in the board after bombing
         MyCustomMap.ClearBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
+        Debug.Log($"Bomb destroyed at {transform.position}");
     }
 }
