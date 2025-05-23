@@ -82,28 +82,31 @@ public class EnemyController : MonoBehaviour
     {
         animator.SetBool("Walking", false);
 
-        if(player.isDead()){
-            return;
-        }
-        if(player.takecare && !player.isWaiting){
-            StartCoroutine(WaitAndResetTakecare());
-        }
-        if (!CanPlaceBomb(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z)))
+        if (player.isDead())
         {
-            // move to any bomb-free path
-            //no bomb can be placed.
-            //FIXME: if eat bonus PowerUp, I should clear and update the Path.
-            MovePath();
-            if (bombs.Count > 0 && !HasBombsActive())
-                bombs.Clear();
             return;
-        }else{
-            //2 drop a bomb
-            DropBomb();
-            // 如果已经计算过路线，按照计算的路线前进
-            player.pathList.Clear();
+        }
+        if (player.isWaiting)
+        {
+            return;
+        }
+        else
+        {
+            if (CanPlaceBomb(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z)))
+            {
+                if (player.avalibleBomb > 0 && bombPrefab)
+                {
+                    if (player.PlayerId == 4)
+                    {
+                        //FIXME: ONLY DEBUG right down player.
+                        int x = Mathf.RoundToInt(transform.position.x);
+                        int z = Mathf.RoundToInt(transform.position.z);
+                        player.avalibleBomb--;
+                        DropBomb();
+                    }
+                }
+            }
             MovePath();
-            return; 
         }
     }
 
@@ -254,7 +257,7 @@ public class EnemyController : MonoBehaviour
             if (Vector3.Distance(transform.position, nextLocation) < 0.01f)
             {
                 // 移除已到达的点
-                player.pathList.RemoveAt(0);
+                DestFinder(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z));
             }
         }
         else
@@ -579,47 +582,45 @@ public class EnemyController : MonoBehaviour
 
     private void DropBomb()
     {
-        if (player.avalibleBomb > 0 && bombPrefab)
+        var obj = Instantiate(bombPrefab, new Vector3(Mathf.RoundToInt(transform.position.x),
+            bombPrefab.transform.position.y, Mathf.RoundToInt(transform.position.z)),
+            bombPrefab.transform.rotation);
+        var temp = obj.GetComponent<Bomb>();
+        temp.PlayerId = player.PlayerId;
+        bombs.Add(temp);
+
+        obj.GetComponent<Bomb>().explode_size = player.explosion_power;
+        obj.GetComponent<Bomb>().player = player;
+        if (player.PlayerId == 4)
         {
-            var obj = Instantiate(bombPrefab, new Vector3(transform.position.x,
-             bombPrefab.transform.position.y, transform.position.z),
-             bombPrefab.transform.rotation);
-
-            player.avalibleBomb--;
-            var temp = obj.GetComponent<Bomb>();
-            temp.PlayerId = player.PlayerId;
-            bombs.Add(temp);
-
-            obj.GetComponent<Bomb>().explode_size = player.explosion_power;
-            obj.GetComponent<Bomb>().player = player;
-            if(player.PlayerId == 4){
-                //FIXME: ONLY DEBUG right down player.
-                int x = Mathf.RoundToInt(transform.position.x);
-                int z = Mathf.RoundToInt(transform.position.z);
-                // 查看他的下一步动作。
-                Debug.Log($"player 4 drop bomb at {transform.position}.");
-            }
-            MyCustomMap.SetCollisionBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
-            //3 run away to dodge the bomb.
-            player.pathList.Clear();
-            // 路线用完了，重新计算路线
-            DestFinder(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z));
+            //FIXME: ONLY DEBUG right down player.
+            int x = Mathf.RoundToInt(transform.position.x);
+            int z = Mathf.RoundToInt(transform.position.z);
+            // 查看他的下一步动作。
+            Debug.Log($"player 4 drop bomb at {transform.position}.");
         }
+        MyCustomMap.SetCollisionBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
+        //3 run away to dodge the bomb.
+
+        // 路线用完了，重新计算路线
+        DestFinder(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z));
+        MovePath();
     }
 
     public void DestFinder(int x, int z) {
         // 遍历棋盘 size=11X11
-            // 找到所有不在炸弹射程的Passage点 SavePoint
-                // 找寻到SavePoint的路径
-                    // 遍历路径
-                    // 路径通则设置为终点站
-                        // 多条路径，是否会跑到炸弹射程里面，如果会，则放弃这条路径。如果不会，就是安全路径。 Security Path
-                        // 向终点站进发。
+        // 找到所有不在炸弹射程的Passage点 SavePoint
+        // 找寻到SavePoint的路径
+        // 遍历路径
+        // 路径通则设置为终点站
+        // 多条路径，是否会跑到炸弹射程里面，如果会，则放弃这条路径。如果不会，就是安全路径。 Security Path
+        // 向终点站进发。
         // 遍历棋盘
         // 找到空点
         // 找到到空点的路径
         // 每点满足条件：是空点，不在炸弹爆炸时刻的射程内。
         // GO!
+        player.pathList.Clear();
         int size = MyCustomMap.GetSize();
         var start = (x, z);
         for(int i = 0; i < size; i++){
@@ -637,12 +638,14 @@ public class EnemyController : MonoBehaviour
                     {
                         bool bad = false;
                         //Console.WriteLine("路径:");
-                        for(int k = 0; k < path.Count; k++)
+                        for(int k = 1; k < path.Count; k++)
                         {
                             var point = path[k];
                             //Console.Write($"({point.x}, {point.y}) -> ");
                             //堵上了，这条路不通
-                            if(!CanWalkAwayFromBomb(point.x, point.y, k)){
+                            float playReachTime = 0.5f*k;//FIXME: 3秒后经过,取决于该路径的点的位置，例如第k个点。
+                            if (!CanWalkAwayFromBomb(point.x, point.y, playReachTime))
+                            {
                                 bad = true;
                                 break;
                             }
@@ -695,15 +698,10 @@ public class EnemyController : MonoBehaviour
     //选择的路径是否碰巧在炸弹爆炸射程里面？
     // x, z is location point of the Path
     // positionAtPath is the point sequence of the Path.
-    public bool CanWalkAwayFromBomb(int x, int z, int positionAtPath)
+    public bool CanWalkAwayFromBomb(int x, int z, float playReachTime)
     {
-        //可能是刚刚放了炸弹
-        if(positionAtPath == 0){
-            return true;
-        }
         // 已知该点 x，z
         // player跑到该点的时间为t秒（t秒取决于路径）
-        float playReachTime = 0.5f*positionAtPath;//FIXME: 3秒后经过,取决于该路径的点的位置，例如第k个点。
         // 附近有炸弹，炸弹爆炸会不会波及该点？
         // 炸弹爆炸不会波及该点，那就可以走。
         // 假设炸弹不会波及该点，怎么判断？
@@ -800,12 +798,14 @@ public class EnemyController : MonoBehaviour
                         bool bad = false;
 
                         //Console.WriteLine("路径:");
-                        for(int k = 0; k < path.Count; k++)
+                        for(int k = 1; k < path.Count; k++)
                         {
                             var point = path[k];
                             //Console.Write($"({point.x}, {point.y}) -> ");
                             //堵上了，这条路不通
-                            if(!CanWalkAwayFromBomb(point.x, point.y, k)){
+                            float playReachTime = 0.5f*k;//FIXME: 3秒后经过,取决于该路径的点的位置，例如第k个点。
+                            if (!CanWalkAwayFromBomb(point.x, point.y, playReachTime))
+                            {
                                 bad = true;
                                 break;
                             }
@@ -860,21 +860,7 @@ public class EnemyController : MonoBehaviour
         return true;
     }
 
-    private IEnumerator WaitAndResetTakecare()
-    {
-        player.isWaiting = true; // 标记为正在等待
-        
-        yield return new WaitForSeconds(3f); // 等待0.5秒
-        
-        if(player != null) // 确保player引用仍然有效
-        {
-            Debug.Log($"user {player.PlayerId} add bomb");
-            player.avalibleBomb++;
-            player.takecare = false;
-        }
-        
-        player.isWaiting = false; // 标记等待结束
-    }
+
     private void HandleLog(string logString, string stackTrace, LogType type)
     {
         string logEntry = $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{type}] {logString}";

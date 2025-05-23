@@ -17,7 +17,7 @@ public class PlayerUnit : MonoBehaviour
 
     public bool dead = false;
     public bool respawning = false;
-    public bool takecare = false; //小心炸弹.3f秒后才消失。
+
     public bool isWaiting = false;
     public Gameplay gameplay;
 
@@ -81,6 +81,8 @@ public class PlayerUnit : MonoBehaviour
 
             int playerId = MyPlayerPrefs.GetPlayerId();
             var self = other.gameObject.GetComponent<DestroySelf>();
+
+            Debug.Log($"Player {PlayerId} is dead at {transform.position} and Collider position is {other.transform.position}");
 
             if(!MyPlayerPrefs.IsAlive(playerId))
             {

@@ -34,10 +34,10 @@ public class Bomb : MonoBehaviour
         //获取当前时间和释放炸弹的时间差。
         // 获取当前时间和释放炸弹的时间差
         float elapsedTime = Time.time - bombSpawnTime;
-        
+
         // 计算剩余时间（总时间3秒减去已过去的时间）
         float remainingTime = 3f - elapsedTime;
-        
+
         // 确保剩余时间不会小于0
         return Mathf.Max(0f, remainingTime);
     }
@@ -47,22 +47,40 @@ public class Bomb : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         audioSource.volume = MyPlayerPrefs.GetVolume();
         position = new Vector2(transform.position.x, transform.position.z); // 初始化position为当前x和z坐标
+        // 记录炸弹释放时间
+        bombSpawnTime = Time.time;
     }
 
     public void Start()
     {
-            // 记录炸弹释放时间
-        bombSpawnTime = Time.time;
         // 获取PlayerController实例
         playerController = FindObjectOfType<PlayerController>();
         Invoke("Explode", 3f);
-    }
 
+    }
+    Bounds CalculateTotalBounds(GameObject obj)
+    {
+        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return new Bounds(obj.transform.position, Vector3.zero);
+
+        Bounds bounds = renderers[0].bounds;
+        foreach (Renderer renderer in renderers)
+        {
+            bounds.Encapsulate(renderer.bounds);
+        }
+        return bounds;
+    }
     private void Explode()
     {
         float volume = MyPlayerPrefs.GetVolume();
         AudioSource.PlayClipAtPoint(explosionSound, transform.position, volume);
-        Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        GameObject tempExplosion = Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        Debug.Log($"explosion at {transform.position}");
+        // 计算所有Renderer的边界
+        Bounds combinedBounds = CalculateTotalBounds(tempExplosion);
+
+        //Debug.Log($"爆炸整体大小: {combinedBounds.size}");
+        //Debug.Log($"爆炸最大范围: {Mathf.Max(combinedBounds.size.x, combinedBounds.size.y, combinedBounds.size.z)}");
 
         StartCoroutine(CreateExplosions(Vector3.forward));
         StartCoroutine(CreateExplosions(Vector3.right));
@@ -80,21 +98,28 @@ public class Bomb : MonoBehaviour
         // 在增加可用炸弹前检查player引用是否有效
         if (player != null)
         {
-            //player.avalibleBomb++;
-            player.takecare = true;
+            //StartCoroutine(WaitAndResetTakecare());
         }
         else
         {
             Debug.LogWarning("炸弹爆炸后player引用为空，无法增加可用炸弹数量");
         }
-        // 通知playerController炸弹已爆炸并移除其位置
-        playerController.OnBombExploded(transform.position);
-        //reveal bonus in the board after bombing
-        MyCustomMap.ClearBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
-
     }
 
+    private IEnumerator WaitAndResetTakecare()
+    {
+        player.isWaiting = true; // 标记为正在等待
 
+        yield return new WaitForSeconds(3f); // 等待0.5秒
+
+        if (player != null) // 确保player引用仍然有效
+        {
+            Debug.Log($"user {player.PlayerId} add bomb");
+            player.avalibleBomb++;
+        }
+
+        player.isWaiting = false; // 标记等待结束
+    }
 
     public void OnTriggerEnter(Collider other)
     {
@@ -138,9 +163,17 @@ public class Bomb : MonoBehaviour
         foreach (Vector3 position in list)
         {
             var obj = Instantiate(explosionPrefab, position, explosionPrefab.transform.rotation);
+            Debug.Log($"create explosion at {position}");
             var script = obj.GetComponent<DestroySelf>();
             script.EnemyId = PlayerId;
             yield return new WaitForSeconds(.05f);
         }
+    }
+    private void OnDestroy() {
+        player.avalibleBomb++;
+        // 通知playerController炸弹已爆炸并移除其位置
+        playerController.OnBombExploded(transform.position);
+        //reveal bonus in the board after bombing
+        MyCustomMap.ClearBit(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.z), PommermanItem.Bomb);
     }
 }
